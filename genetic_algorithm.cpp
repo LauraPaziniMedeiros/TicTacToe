@@ -7,11 +7,14 @@
 #include <string>
 #include <algorithm>
 #include <random>
-// #include "TicTacToe.cpp"
+#include <fstream>
 using namespace std;
 
-// Defines an empty cell for the game board
-const char EMPTY_CELL = ' ';
+const char EMPTY_CELL = ' '; // Defines an empty cell for the game board
+#define WIN 1
+#define LOSS -1
+#define DRAW 0
+
 
 /**
  * @class Board
@@ -162,18 +165,18 @@ class BOT {
 
     /**
      * @brief Updates the bot's "genome" based on the game's outcome.
-     * @param win Represents the result of the game: 
+     * @param result Represents the result of the game: 
      * 1 if the bot won, -1 if it lost and 0 if it's a draw.
      */
-    void update_genomes(short win) {
+    void update_genomes(short result) {
         int counter = 0;
         int reward = 0;
 
-        if(win == 1) { // Win
+        if(result == WIN) {
             reward = 10;
-        } else if(win == -1) { // Loss
+        } else if(result == LOSS) {
             reward = -10;
-        } else { // Draw
+        } else if(result == DRAW) {
             reward = 5; // Give a smaller reward for drawing to prefer it over losing
         }
 
@@ -181,11 +184,11 @@ class BOT {
         for(auto& board : last_game) {
             if(genomes.count(board) == 0) {
                 // If this state is new, initialize all scores randomly
-                genomes[board] = {rand() % 100, rand() % 100, rand() % 100, rand() % 100, rand() % 100, rand() % 100, rand() % 100, rand() % 100, rand() % 100};
+                genomes[board] = {rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1};
             }
             
             // Apply the reward/penalty
-            int move_index = moves[counter].second * 3 + moves[counter].first;
+            int move_index = moves[counter].first * 3 + moves[counter].second;
             genomes[board][move_index] += reward;
 
             // Set's a floor for negative numbers.
@@ -239,6 +242,29 @@ class BOT {
         // Fallback for edge cases
         return valid_moves.back().first;
     }
+
+    /**
+     * @brief Prints the genome for the current board's state before picking a move
+     * @param board The game's current board.
+     */
+    void print_genome(BOARD &board) {
+        if(genomes.count(board.grid) == 0){
+            cout << "This board state has no records\n";
+            return;
+        }
+        for(auto& genome : genomes[board.grid])
+            cout << genome << " ";
+        cout << endl;
+    }
+
+    /**
+     * @brief Clears the bot's history regarding the last game played.
+     * This function does not reset the bot's genomes.
+     */
+    void clear_history(void) {
+        last_game.clear();
+        moves.clear();
+    }
 };
 
 /**
@@ -280,9 +306,15 @@ class TicTacToeBOT {
             if(print)
                 board.draw_board();
 
+            // Prints the bot's chance of picking each move
+            if(print) {
+                cout << "Possible moves: ";
+                players[curr_player].print_genome(board);
+            }
+
             // Chooses the next move based on previous games
             if(print)
-                cout << "Player " << players[curr_player].symbol << ", make a move (row and collum): ";
+                cout << "Player " << players[curr_player].symbol << ", make a move (row and column): ";
             move = players[curr_player].choose_move(board); // Guaranteed valid move
             if(print)
                 cout << move.first << " " << move.second << endl;
@@ -293,10 +325,10 @@ class TicTacToeBOT {
             if(board.check_win(move.first, move.second)) {
                 if(print) {
                     board.draw_board();
-                    cout << "You won!\n";
+                    cout << "Player " << players[curr_player].symbol << " won!\n";
                 }
-                players[curr_player].update_genomes(1);
-                players[!curr_player].update_genomes(-1);
+                players[curr_player].update_genomes(WIN);
+                players[!curr_player].update_genomes(LOSS);
                 return;
             }
 
@@ -306,8 +338,8 @@ class TicTacToeBOT {
                     board.draw_board();
                     cout << "It's a draw!\n";
                 }
-                players[curr_player].update_genomes(0);
-                players[!curr_player].update_genomes(0);
+                players[curr_player].update_genomes(DRAW);
+                players[!curr_player].update_genomes(DRAW);
                 return;
             }
 
@@ -319,7 +351,7 @@ class TicTacToeBOT {
 int main(void) {
     srand(time(NULL));
     TicTacToeBOT game;
-    int i = 20;
+    int i = 3000;
     while(i > 0) {
         i--;
         game.botVSbot();
