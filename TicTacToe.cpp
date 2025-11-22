@@ -110,6 +110,36 @@ public:
 
         return false;
     }
+    BOARD rotaciona_90() const{
+        BOARD newTab;
+        for(int i =0; i<3; i++){
+            for(int j =0; j<3; j++){
+                newTab.grid[i][j] = grid[2-j][i];
+            }
+        }
+        newTab.used_cells = used_cells;
+        return newTab;
+    }
+
+    bool equals(const BOARD& other) const{
+        return grid == other.grid;
+    }
+
+    bool angulo(const BOARD &target) const{
+        if(equals(target)) return true;
+
+        BOARD tab90 = this->rotaciona_90();
+        if(tab90.equals(target)) return true;
+
+        BOARD tab180 = tab90.rotaciona_90();
+        if(tab180.equals(target)) return true;
+
+        BOARD tab270 = tab180.rotaciona_90();
+        if(tab270.equals(target)) return true;
+
+        return false;
+    }
+
 };
 
 /**
