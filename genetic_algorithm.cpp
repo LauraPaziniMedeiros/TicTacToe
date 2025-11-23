@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <random>
 #include <fstream>
+#include <sstream>
 using namespace std;
 
 const char EMPTY_CELL = ' '; // Defines an empty cell for the game board
@@ -30,7 +31,10 @@ private:
 public:
     vector<char> grid; // ' ', 'X' or 'O'
 
-    void initialize_board(void) {
+    /**
+     * @brief Resets the board to it's default settings
+     */
+    void reset_board(void) {
         for (auto& symbol : grid)
             symbol = EMPTY_CELL;
         used_cells = 0;
@@ -40,7 +44,7 @@ public:
      * @brief Constructs an empty Tic-Tac-Toe board.
      */
     BOARD() : used_cells(0), grid(9) {
-        initialize_board();
+        reset_board();
     }
 
     /**
@@ -146,6 +150,46 @@ class BOT {
     // 'moves' stores the {x, y} coordinates for each move in 'last_game'
     vector<pair<short, short>> moves;
 
+    /**
+     * @brief Rotates the board 90 degrees clockwise
+     * @param raw_grid The original grid (before rotating)
+     * @return the new rotated board grid
+     */
+    vector<char> rotate_90(vector<char> raw_grid) {
+        vector<char> new_grid(9);
+        for(int i =0; i<3; i++){
+            for(int j =0; j<3; j++){
+                new_grid[i * 3 + j] = raw_grid[(2-j) * 3 + i];
+            }
+        }
+        return new_grid;
+    }
+
+    /**
+     * @brief Finds the "Canonical" (standard) form of the board.
+     * Checks all 4 rotations and returns the one that is lexicographically smallest.
+     * This ensures 0 deg, 90 deg, 180 deg, and 270 deg versions of the same board
+     * all map to the SAME entry in the genomes map.
+     * @param raw_grid the original grid
+     * @param raw_move pair<x, y> the original move leading to the grid
+     * @return pair<Canonical Grid, pair<rotated movement>>
+     */
+    pair<vector<char>, pair<short, short>> get_canonical(const vector<char>& raw_grid, const pair<short, short>& raw_move) {
+        vector<char> canon_grid = raw_grid;
+        pair<short, short> canon_move = raw_move;
+        // Try all rotations
+        for(int i = 0; i < 3; i++) {
+            vector<char> rotated = rotate_90(raw_grid);
+            
+            // Lexicographical comparison
+            if (rotated < canon_grid) {
+                canon_grid = rotated;
+                canon_move = {2 - raw_move.second, raw_move.first};
+            }
+        }
+        return {canon_grid, canon_move};
+    }
+
     public:
     // The bot's symbol on the board
     char symbol;
@@ -153,14 +197,24 @@ class BOT {
     BOT(char symbol) : symbol(symbol) {}
 
     /**
-     * @brief registers the last move made by the bot.
+     * @brief Clears the bot's history regarding the last game played.
+     * This function does not reset the bot's genomes.
+     */
+    void clear_history(void) {
+        last_game.clear();
+        moves.clear();
+    }
+
+    /**
+     * @brief registers the last move made by the bot in it's canonical form.
      * @param grid the board's current grid.
      * @param x the row of the last move.
      * @param y the columm of the last move.
      */
     void register_move(const vector<char>& grid, const short& x, const short& y) {
-        last_game.push_back(grid);
-        moves.push_back({x, y});
+        auto canon = get_canonical(grid, {x, y});
+        last_game.push_back(canon.first);
+        moves.push_back(canon.second);
     }
 
     /**
@@ -168,7 +222,7 @@ class BOT {
      * @param result Represents the result of the game: 
      * 1 if the bot won, -1 if it lost and 0 if it's a draw.
      */
-    void update_genomes(short result) {
+    void update_genomes(const short& result) {
         int counter = 0;
         int reward = 0;
 
@@ -182,18 +236,21 @@ class BOT {
 
         // Apply reward to all moves made in the game
         for(auto& board : last_game) {
-            if(genomes.count(board) == 0) {
+            auto canon = get_canonical(board, moves[counter]);
+            vector<char>& canon_board = canon.first;
+            pair<short, short> canon_move = canon.second;
+            if(genomes.count(canon.first) == 0) {
                 // If this state is new, initialize all scores randomly
-                genomes[board] = {rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1, rand() % 100 + 1};
+                genomes[canon_board] = {rand() % 10 + 1, rand() % 10 + 1, rand() % 10 + 1, rand() % 10 + 1, rand() % 10 + 1, rand() % 10 + 1, rand() % 10 + 1, rand() % 10 + 1, rand() % 10 + 1};
             }
             
             // Apply the reward/penalty
-            int move_index = moves[counter].first * 3 + moves[counter].second;
-            genomes[board][move_index] += reward;
+            short move_index = canon_move.first * 3 + canon_move.second;
+            genomes[canon_board][move_index] += reward;
 
             // Set's a floor for negative numbers.
-            if (genomes[board][move_index] < 1) {
-                genomes[board][move_index] = 1;
+            if (genomes[canon_board][move_index] < 1) {
+                genomes[canon_board][move_index] = 1;
             }
 
             counter++;
@@ -247,7 +304,7 @@ class BOT {
      * @brief Prints the genome for the current board's state before picking a move
      * @param board The game's current board.
      */
-    void print_genome(BOARD &board) {
+    void print_genome(const BOARD &board) {
         if(genomes.count(board.grid) == 0){
             cout << "This board state has no records\n";
             return;
@@ -258,12 +315,102 @@ class BOT {
     }
 
     /**
-     * @brief Clears the bot's history regarding the last game played.
-     * This function does not reset the bot's genomes.
+     * @brief Saves the bot's genomes map to a text file.
+     * @param filename The name of the file to save to.
+     * @return true if saving was successful, false otherwise.
      */
-    void clear_history(void) {
-        last_game.clear();
-        moves.clear();
+    bool save_genomes(const string& filename) {
+        ofstream file(filename);
+        if (!file.is_open()) {
+            cerr << "Error: Could not open file for writing: " << filename << endl;
+            return false;
+        }
+
+        // Iterate through each map entry
+        for (const auto& entry : genomes) {
+            const vector<char>& board_key = entry.first;
+            const vector<int>& scores = entry.second;
+
+            // Write the board key (9 characters)
+            for (int i = 0; i < 9; ++i) {
+                // Use a placeholder for the empty cell to avoid file parsing issues
+                file << (board_key[i] == EMPTY_CELL ? '_' : board_key[i]);
+            }
+            
+            // Separator
+            file << " :"; // Note the space
+
+            // Write the 9 scores
+            for (int score : scores) {
+                file << " " << score;
+            }
+            file << "\n"; // Newline for the next entry
+        }
+
+        file.close();
+        return true;
+    }
+
+    /**
+     * @brief Loads the bot's genomes map from a text file.
+     * @param filename The name of the file to load from.
+     * @return true if loading was successful, false otherwise.
+     */
+    bool load_genomes(const string& filename) {
+        ifstream file(filename);
+        if (!file.is_open()) {
+            // This is not a critical error if the file just doesn't exist yet
+            cout << "Info: Could not open file for reading: " << filename << ". Starting with empty genomes." << endl;
+            return false;
+        }
+
+        genomes.clear(); // Clear existing genomes before loading
+        string line;
+        int line_count = 0;
+
+        // Read the file line by line
+        while (getline(file, line)) {
+            line_count++;
+            stringstream ss(line);
+            string key_str;
+            string separator;
+            
+            // Read the key part and the separator
+            ss >> key_str >> separator;
+
+            if (key_str.length() != 9 || separator != ":") {
+                cerr << "Warning: Skipping malformed line " << line_count << ": " << line << endl;
+                continue;
+            }
+
+            // Convert the key string back to vector<char>
+            vector<char> board_key(9);
+            for (int i = 0; i < 9; ++i) {
+                // Convert placeholder back to empty cell
+                board_key[i] = (key_str[i] == '_' ? EMPTY_CELL : key_str[i]);
+            }
+
+            // Read the 9 scores
+            vector<int> scores(9);
+            bool read_success = true;
+            for (int i = 0; i < 9; ++i) {
+                if (!(ss >> scores[i])) {
+                    read_success = false;
+                    break;
+                }
+            }
+
+            if (!read_success) {
+                cerr << "Warning: Skipping malformed scores on line " << line_count << ": " << line << endl;
+                continue;
+            }
+
+            // Add the entry to the genomes map
+            genomes[board_key] = scores;
+        }
+
+        file.close();
+        return true;
     }
 };
 
@@ -292,13 +439,13 @@ class TicTacToeBOT {
     /**
      * @brief An auto-player between two bots competing against
      *  each other in a game of tic tac toe.
-     * @param print Boolean to turn on console printing of the game. Default: true.
+     * @param print Boolean to turn on console printing of the game. Default = true.
      */
-    void botVSbot(bool print = true) {
+    void botVSbot(const bool& print = true) {
         // Clears memory
-        board.initialize_board();
+        board.reset_board();
 
-         // Player's moves (grid index)
+        // Player's moves (grid index)
         pair<short, short> move = {-1, -1};
         
         // Main game loop
@@ -329,7 +476,7 @@ class TicTacToeBOT {
                 }
                 players[curr_player].update_genomes(WIN);
                 players[!curr_player].update_genomes(LOSS);
-                return;
+                break;
             }
 
             // Stops the game if the last move filled up the board (draw);
@@ -340,21 +487,23 @@ class TicTacToeBOT {
                 }
                 players[curr_player].update_genomes(DRAW);
                 players[!curr_player].update_genomes(DRAW);
-                return;
+                break;
             }
 
             switch_player();
         }
+        players[0].save_genomes("X.txt");
+        players[1].save_genomes("O.txt");
     }
 };
 
 int main(void) {
     srand(time(NULL));
     TicTacToeBOT game;
-    int i = 3000;
+    int i = 1;
     while(i > 0) {
         i--;
-        game.botVSbot();
+        game.botVSbot(true);
     }
 
     return 0;
