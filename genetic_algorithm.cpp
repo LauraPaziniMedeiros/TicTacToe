@@ -143,8 +143,6 @@ public:
  */
 class BOT {
     private:
-    // 'genomes' maps a board state to a vector of 9 scores (one for each cell of the board)
-    map<vector<char>, vector<int>> genomes;
     // 'last_game' stores the sequence of board states for this bot in the current game
     vector<vector<char>> last_game;
     // 'moves' stores the {x, y} coordinates for each move in 'last_game'
@@ -191,10 +189,12 @@ class BOT {
     }
 
     public:
+    // 'genomes' maps a board state to a vector of 9 scores (one for each cell of the board)
+    map<vector<char>, vector<int>> genomes;
     // The bot's symbol on the board
     char symbol;
 
-    BOT(char symbol) : symbol(symbol) {}
+    BOT(char symbol = 'X') : symbol(symbol) {}
 
     /**
      * @brief Clears the bot's history regarding the last game played.
@@ -301,15 +301,16 @@ class BOT {
     }
 
     /**
-     * @brief Prints the genome for the current board's state before picking a move
+     * @brief Prints the genome for the current board's canonical state before picking a move
      * @param board The game's current board.
      */
-    void print_genome(const BOARD &board) {
-        if(genomes.count(board.grid) == 0){
+    void print_genome(const BOARD &board, pair<short, short>& move) {
+        auto canon = get_canonical(board.grid, move);
+        if(genomes.count(canon.first) == 0){
             cout << "This board state has no records\n";
             return;
         }
-        for(auto& genome : genomes[board.grid])
+        for(auto& genome : genomes[canon.first])
             cout << genome << " ";
         cout << endl;
     }
@@ -421,7 +422,6 @@ class BOT {
  */
 class TicTacToeBOT {
     private:
-    array<BOT, 2> players; // Stores each player's symbols
     bool curr_player; // 0 = p0, 1 = p1
     BOARD board;
 
@@ -433,20 +433,24 @@ class TicTacToeBOT {
     }
 
     public:
+    array<BOT, 2> players; // Stores each player (BOT)
 
-    TicTacToeBOT() : players{BOT('X'), BOT('O')}, curr_player(0) {}
+    TicTacToeBOT(BOT& X, BOT& Y) : curr_player(0), board(), players{X, Y}{}
 
     /**
      * @brief An auto-player between two bots competing against
      *  each other in a game of tic tac toe.
      * @param print Boolean to turn on console printing of the game. Default = true.
+     * @return Game's result. 0 = draw, 1 = X won, 2 = O won
      */
-    void botVSbot(const bool& print = true) {
+    short botVSbot(const bool& print = true) {
         // Clears memory
         board.reset_board();
 
         // Player's moves (grid index)
         pair<short, short> move = {-1, -1};
+        // Game's result
+        short result = 0;
         
         // Main game loop
         while(true) {
@@ -455,8 +459,8 @@ class TicTacToeBOT {
 
             // Prints the bot's chance of picking each move
             if(print) {
-                cout << "Possible moves: ";
-                players[curr_player].print_genome(board);
+                cout << "Possible moves (canonical rotation): ";
+                players[curr_player].print_genome(board, move);
             }
 
             // Chooses the next move based on previous games
@@ -476,6 +480,7 @@ class TicTacToeBOT {
                 }
                 players[curr_player].update_genomes(WIN);
                 players[!curr_player].update_genomes(LOSS);
+                if(players[curr_player].symbol == 'X') result = 1; else result = 2;
                 break;
             }
 
@@ -492,19 +497,19 @@ class TicTacToeBOT {
 
             switch_player();
         }
-        players[0].save_genomes("X.txt");
-        players[1].save_genomes("O.txt");
+        return result;
     }
 };
 
-int main(void) {
-    srand(time(NULL));
-    TicTacToeBOT game;
-    int i = 1;
-    while(i > 0) {
-        i--;
-        game.botVSbot(true);
-    }
+// int main(void) {
+//     srand(time(NULL));
+//     BOT A, B('O');
+//     TicTacToeBOT game(A, B);
+//     int i = 1;
+//     while(i > 0) {
+//         i--;
+//         game.botVSbot(true);
+//     }
 
-    return 0;
-}
+//     return 0;
+// }

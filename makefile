@@ -1,5 +1,5 @@
 all:
-	g++ genetic_algorithm.cpp -o a -Wall -Werror
+	g++ genetic_algorithm.cpp population.cpp -o a -Wall -Werror
 
 run:
 	./a
