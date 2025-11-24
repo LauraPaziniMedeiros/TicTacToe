@@ -96,7 +96,7 @@ class POPULATION {
         }
 
         // Setup Random Number Generator
-        auto rng = std::default_random_engine(time(NULL));
+        auto rng = default_random_engine(time(NULL));
         for(int j = 0; j < ROUNDS; j++) {
             // This ensures random matchmaking every generation
             shuffle(pop.begin(), pop.end(), rng);
@@ -107,22 +107,22 @@ class POPULATION {
                 pop[i+1].first.symbol = 'O';
                 TicTacToeBOT game(pop[i].first, pop[i+1].first);
                 int result = game.botVSbot(print);
-                if(result == 0) {
+                if(result == DRAW) {
                     pop[i] = {game.players[0], pop[i].second};
                     pop[i+1] = {game.players[1], pop[i+1].second};
                 }
-                else if(result == 1) {
+                else if(result == WIN) { // X won
                     pop[i] = {game.players[0], pop[i].second + 1};
                     pop[i+1] = {game.players[1], pop[i+1].second - 1};
                 }
-                else {
+                else { // O won
                     pop[i] = {game.players[0], pop[i].second - 1};
                     pop[i+1] = {game.players[1], pop[i+1].second + 1};
                 }
             }
             for(int i = 0; i < INDIVIDUALS; i += 2) {
                 cout << "WIN RATE BOT " << i << ": " << pop[i].second << endl;
-                cout << "WIN RATE BOT " << i << ": " << pop[i+1].second << endl;
+                cout << "WIN RATE BOT " << i+1 << ": " << pop[i+1].second << endl;
             }
             if(j % CROSSOVER_ROUNDS == 0) // Creates a new generation every 5 rounds
                 crossover();

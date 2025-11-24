@@ -441,7 +441,7 @@ class TicTacToeBOT {
      * @brief An auto-player between two bots competing against
      *  each other in a game of tic tac toe.
      * @param print Boolean to turn on console printing of the game. Default = true.
-     * @return Game's result. 0 = draw, 1 = X won, 2 = O won
+     * @return Game's result. 0 = draw, 1 = X won, -1 = O won
      */
     short botVSbot(const bool& print = true) {
         // Clears memory
@@ -450,7 +450,7 @@ class TicTacToeBOT {
         // Player's moves (grid index)
         pair<short, short> move = {-1, -1};
         // Game's result
-        short result = 0;
+        short result = DRAW;
         
         // Main game loop
         while(true) {
@@ -480,7 +480,7 @@ class TicTacToeBOT {
                 }
                 players[curr_player].update_genomes(WIN);
                 players[!curr_player].update_genomes(LOSS);
-                if(players[curr_player].symbol == 'X') result = 1; else result = 2;
+                if(players[curr_player].symbol == 'X') result = WIN; else result = LOSS;
                 break;
             }
 
