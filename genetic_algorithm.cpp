@@ -296,6 +296,13 @@ class BOT {
         return true;
     }
 
+    /***
+     * @brief Un-rotates and un-flips canon genomes.
+     * @param canon_genomes the rotated/flipped genomes
+     * @param rotation the number of 90º rotations
+     * @param flip if the genomes were flipped or not
+     * @return Ther raw genomes.
+     */
     vector<long long> raw_genomes(const vector<long long>& canon_genomes, const int& rotation, const bool& flip) {
         vector<long long> raw = canon_genomes;
         // rotates
