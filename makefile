@@ -1,7 +1,7 @@
 all:
 	g++ genetic_algorithm.cpp population.cpp -o a -Wall -Werror
 
-run:
+run: all
 	./a
 
 clean:
