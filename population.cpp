@@ -4,6 +4,7 @@
 // Config
 #define INDIVIDUALS 6
 float MIN_MUT = 0.05, MAX_MUT = 0.3;
+float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
 #define ROUNDS 10
 #define CROSSOVER_ROUNDS 5
 
@@ -41,19 +42,29 @@ class POPULATION {
         MUTATION_RATE = MIN_MUT + (MAX_MUT - MIN_MUT) * factor;
     }
 
-    vector<int> mutate(vector<int> genome) {
+    vector<int> mutate(vector<int> genome)
+    {
         vector<int> mutated;
-        for(auto& g : genome) {
-            float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-            if(r <= MUTATION_RATE) {
-                int m = (1 + MUTATION_RATE) * g;
-                int noise = (rand() % m) - m/2;
-                m = g + noise;
-                if(m < 1) m = 1;
+        // Instead of using the old rand() from C, I am using the random library from C++. rd is the random device that we use to generate the pseudo-random numbers, and rng is the generator, using Mersenne-Twister algorithm.
+        std::random_device rd;
+        std::mt19937 rng(rd());
+
+        // The chance of mutating is defined by a random applied into an uniform distribution, while the noise is defined by a random choose in a normal distribution
+        std::uniform_real_distribution<double> chanceDist(0.0, 1.0);
+        std::normal_distribution<double> noiseDist(0.0, MUTATION_STEP);
+
+        // This part of the code is the same, I just changed the calculations of the noise and the ceiling for the random number to use standard C++ functions.
+        for (auto &g : genome)
+        {
+            if (chanceDist(rng) <= MUTATION_RATE)
+            {
+                int noise = noiseDist(rng);
+                int m = g + static_cast<int>(std::round(noise));
+                m = std::min(1, m);
                 mutated.push_back(m);
             }
             else
-                mutated.push_back(g);   
+                mutated.push_back(g);
         }
         return mutated;
     }
