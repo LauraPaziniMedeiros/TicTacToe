@@ -42,16 +42,16 @@ class POPULATION {
         MUTATION_RATE = MIN_MUT + (MAX_MUT - MIN_MUT) * factor;
     }
 
-    vector<int> mutate(vector<int> genome)
+    vector<long long> mutate(vector<long long> genome)
     {
-        vector<int> mutated;
+        vector<long long> mutated;
         // Instead of using the old rand() from C, I am using the random library from C++. rd is the random device that we use to generate the pseudo-random numbers, and rng is the generator, using Mersenne-Twister algorithm.
-        std::random_device rd;
-        std::mt19937 rng(rd());
+        random_device rd;
+        mt19937 rng(rd());
 
         // The chance of mutating is defined by a random applied into an uniform distribution, while the noise is defined by a random choose in a normal distribution
-        std::uniform_real_distribution<double> chanceDist(0.0, 1.0);
-        std::normal_distribution<double> noiseDist(0.0, MUTATION_STEP);
+        uniform_real_distribution<double> chanceDist(0.0, 1.0);
+        normal_distribution<double> noiseDist(0.0, MUTATION_STEP);
 
         // This part of the code is the same, I just changed the calculations of the noise and the ceiling for the random number to use standard C++ functions.
         for (auto &g : genome)
@@ -83,9 +83,10 @@ class POPULATION {
         }
         else
             stagnation++;
+
+        new_pop.push_back(BEST);
             
-        
-        for(int i = 0; i < INDIVIDUALS; i++) {
+        for(int i = 1; i < INDIVIDUALS; i++) {
             BOT child;
             if(i % 2) child.symbol = 'X'; else child.symbol = 'O';
             // The child has all the BEST's genomes
@@ -94,9 +95,9 @@ class POPULATION {
             for(auto& [board_state, genome] : pop[i].first.genomes) {
                 if(child.genomes.count(board_state)) { // Both parents have this genome
                     // Average of both parent's genomes
-                    for(int i = 0; i < 9; i++) {
-                        child.genomes[board_state][i] += genome[i];
-                        child.genomes[board_state][i] /= 2;
+                    for(int j = 0; j < 9; j++) {
+                        child.genomes[board_state][j] += genome[j];
+                        child.genomes[board_state][j] /= 2;
                     }
                 }
                 else // Only the current individual has this genome
@@ -174,6 +175,6 @@ class POPULATION {
 
 int main(void) {
     POPULATION p;
-    p.train_population(true, true);
+    p.train_population(true, false);
     return 0;
 }
