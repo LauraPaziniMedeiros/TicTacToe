@@ -5,4 +5,4 @@ run:
 	./a
 
 clean:
-	rm a O0.txt O2.txt O4.txt X0.txt X2.txt X4.txt
+	rm a *.txt
