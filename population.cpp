@@ -3,9 +3,9 @@
 
 // Config
 #define INDIVIDUALS 6
-float MUTATION_RATE = 0.1;
+float MIN_MUT = 0.05, MAX_MUT = 0.3;
 #define ROUNDS 10
-#define CROSSOVER_ROUNDS 10
+#define CROSSOVER_ROUNDS 5
 
 class POPULATION {
     private:
@@ -13,12 +13,16 @@ class POPULATION {
     vector<pair<BOT, int>> pop;
     // The best individual is always stored and unchanged
     pair<BOT, int> BEST;
+    // How many rounds the BEST bot has stayed the same
+    int stagnation;
+    // Current mutation rate
+    float MUTATION_RATE;
 
     public:
     /**
      * @brief creates a population of bots (alternating symbols) and with 0 wins.
      */
-    POPULATION() : pop(INDIVIDUALS), BEST() {
+    POPULATION() : pop(INDIVIDUALS), BEST(), stagnation(0), MUTATION_RATE(MIN_MUT) {
         for(int i = 0; i < INDIVIDUALS; i += 2) {
             BOT aux('X');
             pop[i] = {aux, 0};
@@ -31,7 +35,13 @@ class POPULATION {
         BEST = {pop[0]};
     }
 
-    vector<int> mutation(vector<int> genome) {
+    void update_mutation_rate() {
+        float factor = min(1.0, stagnation / 10.0); 
+
+        MUTATION_RATE = MIN_MUT + (MAX_MUT - MIN_MUT) * factor;
+    }
+
+    vector<int> mutate(vector<int> genome) {
         vector<int> mutated;
         for(auto& g : genome) {
             float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -43,7 +53,7 @@ class POPULATION {
                 mutated.push_back(m);
             }
             else
-                mutated.push_back(g);        
+                mutated.push_back(g);   
         }
         return mutated;
     }
@@ -55,13 +65,19 @@ class POPULATION {
 
         // the best crosses over with every other individual and creates a new population
         vector<pair<BOT, int>> new_pop;
-        if(BEST.second < pop[0].second) 
+        // Updates BEST and the stagnation rate
+        if(BEST.second < pop[0].second) {
             BEST = pop[0];
+            stagnation = 0;
+        }
+        else
+            stagnation++;
+            
         
         for(int i = 0; i < INDIVIDUALS; i++) {
             BOT child;
             if(i % 2) child.symbol = 'X'; else child.symbol = 'O';
-            // The child now knows everything the best individual does
+            // The child has all the BEST's genomes
             child.genomes = BEST.first.genomes;
 
             for(auto& [board_state, genome] : pop[i].first.genomes) {
@@ -74,6 +90,9 @@ class POPULATION {
                 }
                 else // Only the current individual has this genome
                     child.genomes[board_state] = genome;
+                // Applies mutation
+                update_mutation_rate();
+                child.genomes[board_state] = mutate(child.genomes[board_state]);
             }
             // Win rate is the average between the parent's last win rate
             new_pop.push_back({child, (BEST.second + pop[i].second) / 2});

@@ -5,4 +5,4 @@ run:
 	./a
 
 clean:
-	rm a
+	rm a *.txt
