@@ -14,8 +14,6 @@ class POPULATION {
     // The best individual is always stored and unchanged
     pair<BOT, int> BEST;
 
-    int last_best_score = -1;
-    int stagnation = 0;
     public:
     /**
      * @brief creates a population of bots (alternating symbols) and with 0 wins.
@@ -49,15 +47,6 @@ class POPULATION {
         }
         return mutated;
     }
-
-        void update_mutation_rate() {
-        float min_rate = 0.05f;
-        float max_rate = 0.30f;
-        float factor = std::min(1.0, stagnation / 10.0);  
-
-        MUTATION_RATE = min_rate + (max_rate - min_rate) * factor;
-    }
-
 
     void crossover(void) {
         // Sorting based on win rate
