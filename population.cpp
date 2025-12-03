@@ -66,15 +66,16 @@ class POPULATION {
 
             for(auto& [board_state, genome] : pop[i].first.genomes) {
                 if(child.genomes.count(board_state)) { // Both parents have this genome
-                    // 50% chance of inheriting each parent's genome
-                    if (rand() % 2 == 0) // Keeps this individual's genome
-                        child.genomes[board_state] = genome;
-                    // Else: Keeps best individual's genome
+                    // Average of both parent's genomes
+                    for(int i = 0; i < 9; i++) {
+                        child.genomes[board_state][i] += genome[i];
+                        child.genomes[board_state][i] /= 2;
+                    }
                 }
-                else { // Only the current individual has this genome
+                else // Only the current individual has this genome
                     child.genomes[board_state] = genome;
-                }                                
             }
+            // Win rate is the average between the parent's last win rate
             new_pop.push_back({child, (BEST.second + pop[i].second) / 2});
         }
         pop = new_pop;
@@ -124,7 +125,7 @@ class POPULATION {
                 cout << "WIN RATE BOT " << i << ": " << pop[i].second << endl;
                 cout << "WIN RATE BOT " << i+1 << ": " << pop[i+1].second << endl;
             }
-            if(j % CROSSOVER_ROUNDS == 0) // Creates a new generation every 5 rounds
+            if(j % CROSSOVER_ROUNDS == 0) // Creates a new generation every defined number of rounds
                 crossover();
         }
         if(save_load) {
