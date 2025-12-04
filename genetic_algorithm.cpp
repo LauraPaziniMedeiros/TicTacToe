@@ -762,102 +762,84 @@ class BOT {
 };
 
 
+// (Assumindo que Optimal_algorithm::Move está acessível)
+
 class TicTacToeMiniMax{
     private:
-    bool curr_player;
+    bool curr_player; // 0 = P1, 1 = P2
     BOARD board;
+    
+    BOT* bot_ref;
+    Optimal_algorithm* minimax_ref;
+    
+    char P1_SYMBOL; // Símbolo de quem começa
+    char P2_SYMBOL; // Símbolo de quem joga em segundo
 
-    const char BOT_SYMBOL = 'X';
-    const char MINIMAX_SYMBOL = 'O';
-
-    /**
-     * @brief Switches the current player.
-     */
     void switch_player(void) {
-        curr_player = !curr_player; // Toggles 0 and 1
+        curr_player = !curr_player; 
     }
 
     public:
-    // O BOT de Aprendizado (Maximizer no Minimax)
-    BOT X;
-    // O Jogador Perfeito Minimax
-    Optimal_algorithm minimax_o;
-    
-    // Construtor: Inicializa os jogadores com seus símbolos
-    TicTacToeMiniMax() 
-        : curr_player(0), board(), X(BOT_SYMBOL), minimax_o(MINIMAX_SYMBOL) {}
+    // Construtor: Recebe o BOT e o Minimax por referência.
+    TicTacToeMiniMax(BOT& bot, Optimal_algorithm& minimax) 
+        : curr_player(0), board(), bot_ref(&bot), minimax_ref(&minimax) {}
 
     /**
-     * @brief Roda um jogo entre o BOT de Aprendizado (X) e o Minimax (O).
-     * @param print Se deve imprimir o tabuleiro a cada turno.
-     * @return short: O resultado do jogo (WIN, LOSS, DRAW) para o BOT 'X'.
+     * @brief Roda um jogo onde o BOT pode ser P1 ('X') ou P2 ('O') contra o Minimax.
+     * @param bot_is_x: Se TRUE, BOT é 'X' e Minimax é 'O'. Se FALSE, BOT é 'O' e Minimax é 'X'.
+     * @return short: O resultado do jogo (WIN, LOSS, DRAW) para o BOT evolutivo.
      */
-    short botVSminimax(const bool& print = true) {
+    short run_game(bool bot_is_x, const bool& print = true) {
+        P1_SYMBOL = bot_is_x ? 'X' : 'O'; // P1: BOT ou Minimax
+        P2_SYMBOL = bot_is_x ? 'O' : 'X'; // P2: Minimax ou BOT
+        
         board.reset_board();
-        X.clear_history();
-        curr_player = 0; // X começa
+        bot_ref->clear_history();
+        curr_player = 0; // P1 sempre começa
 
         short result = DRAW;
         pair<short, short> move = {-1, -1};
 
-        // Main game loop
         while(true) {
-            if(print)
-                board.draw_board();
+            if(print) board.draw_board();
 
-            // ----------------------------------------------------
-            // 1. TURNO DO BOT DE APRENDIZADO ('X')
-            // ----------------------------------------------------
-            if(curr_player == 0) {
-                // O BOT escolhe o movimento usando a Roleta
-                move = X.choose_move(board); 
+            // Determina quem joga e qual é o símbolo
+            bool current_player_is_bot = (curr_player == 0 && bot_is_x) || (curr_player == 1 && !bot_is_x);
+            char current_symbol = curr_player == 0 ? P1_SYMBOL : P2_SYMBOL;
+
+            if(current_player_is_bot) {
+                // Turnto do BOT de Aprendizado
+                move = bot_ref->choose_move(board); 
                 
-                // O BOT registra o movimento antes de fazê-lo (para a lógica de aprendizado)
-                // Nota: O método choose_move já registra o movimento em last_game
-
                 if(print) {
-                    cout << "Player X (BOT) plays: " << move.first << ", " << move.second << endl;
+                    cout << "Player " << current_symbol << " (BOT) plays: " << move.first << ", " << move.second << endl;
                     cout << "Possible moves (Chromosomes): ";
-                    X.print_genome(board, move);
+                    // Chamada a print_genome deve usar o BOT, que é referenciado por bot_ref
+                    bot_ref->print_genome(board, move);
                 }
-                
-                board.make_move(BOT_SYMBOL, move.first, move.second);
-                
-                // Checa vitória para 'X'
-                if(board.check_win(move.first, move.second)) {
-                    result = WIN;
-                    if(print) { board.draw_board(); cout << "Player X (BOT) won!\n"; }
-                    break;
-                }
-            }
-            
-            // ----------------------------------------------------
-            // 2. TURNO DO MINIMAX ('O')
-            // ----------------------------------------------------
-            else {
-                // O Minimax encontra o melhor movimento
+            } else {
+                // Turnto do MINIMAX
+                // O Minimax precisa saber seu símbolo atual (current_symbol) e o do oponente.
+                char opponent_symbol = current_symbol == 'X' ? 'O' : 'X';
                 Optimal_algorithm::Move minimax_move = 
-                    minimax_o.findBestMove(board, MINIMAX_SYMBOL, BOT_SYMBOL);
+                    minimax_ref->findBestMove(board, current_symbol, opponent_symbol);
                 
-                move = {minimax_move.row, minimax_move.col};
+                move = {(short)minimax_move.row, (short)minimax_move.col};
 
                 if(print) {
-                    cout << "Player O (Minimax) plays: " << move.first << ", " << move.second << endl;
-                }
-                
-                board.make_move(MINIMAX_SYMBOL, move.first, move.second);
-
-                // Checa vitória para 'O'
-                if(board.check_win(move.first, move.second)) {
-                    result = LOSS;
-                    if(print) { board.draw_board(); cout << "Player O (Minimax) won!\n"; }
-                    break;
+                    cout << "Player " << current_symbol << " (Minimax) plays: " << move.first << ", " << move.second << endl;
                 }
             }
 
-            // ----------------------------------------------------
-            // 3. CHECAGEM DE EMPATE
-            // ----------------------------------------------------
+            board.make_move(current_symbol, move.first, move.second);
+
+            // Checagem de vitória/empate
+            if(board.check_win(move.first, move.second)) {
+                result = current_player_is_bot ? WIN : LOSS;
+                if(print) { board.draw_board(); cout << "Player " << current_symbol << " won!\n"; }
+                break;
+            }
+
             if(board.full()) {
                 result = DRAW;
                 if(print) { board.draw_board(); cout << "It's a draw!\n"; }
@@ -867,12 +849,11 @@ class TicTacToeMiniMax{
             switch_player();
         }
         
-        // ----------------------------------------------------
-        // 4. APRENDIZADO DO BOT
-        // ----------------------------------------------------
-        X.update_genomes(result);
+        // APRENDIZADO DO BOT: O genoma do objeto original pop[i].first é atualizado.
+        bot_ref->update_genomes(result);
         return result;
     }
+
 };
 
 /**
