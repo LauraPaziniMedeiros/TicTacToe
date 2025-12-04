@@ -81,6 +81,14 @@ public:
         }
     }
 
+    // Na classe BOARD
+    bool isMoveLeft(void){
+        for(int i = 0; i<9; i++) // Itera diretamente sobre o vetor
+            if(grid[i] == EMPTY_CELL)
+                return true;
+        return false;
+    }
+
     /**
      * @brief Checks if the board is full (resulting in a draw).
      * @return true if all 9 cells are used, false otherwise.
@@ -131,6 +139,174 @@ public:
             return true;
 
         return false;
+    }
+
+    char get_cell(short int x, short int y) const {
+        // Verifica se os índices estão fora dos limites do tabuleiro 3x3
+        if (x < 0 || x > 2 || y < 0 || y > 2) {
+            // Se for inválido, podemos retornar um caractere de erro ou lançar uma exceção.
+            // Aqui, retornamos '?' para indicar um erro.
+            return '?'; 
+        }
+
+        // Converte os índices (x, y) para o índice linear do vetor (x * 3 + y)
+        return grid[x * 3 + y];
+    }
+};
+
+
+class Optimal_algorithm{
+    private:
+        int evaluate(BOARD &b, char player, char opponent){
+        // Checking for Rows for X or O victory.
+        for(int row = 0; row<3; row++){
+            if(b.get_cell(row, 0) == b.get_cell(row, 1) &&
+                b.get_cell(row, 1) == b.get_cell(row, 2))
+            {
+                if(b.get_cell(row, 0) == player)
+                    return +10;
+                else if(b.get_cell(row,0) == opponent)
+                    return -10;
+            }
+        }
+        // Checking for Columns for X or O victory.
+        for(int col = 0; col<3; col++){
+            if(b.get_cell(0, col) == b.get_cell(1, col) &&
+                b.get_cell(1, col) == b.get_cell(2, col))
+            {
+                if(b.get_cell(0, col) == player)
+                    return +10;
+                else if(b.get_cell(0, col) == opponent)
+                    return -10;
+            }
+        }
+
+        // Checking for Diagonals for X or O victory.
+        if(b.get_cell(0,0) == b.get_cell(1,1) && 
+            b.get_cell(1,1) == b.get_cell(2,2))
+        {
+            if(b.get_cell(0, 0) == player)
+                return +10;
+            else if(b.get_cell(0,0) == opponent)
+                return -10;
+        }
+
+        if(b.get_cell(0,2) == b.get_cell(1,1) && 
+            b.get_cell(1,1) == b.get_cell(2,0))
+        {
+            if(b.get_cell(0,2) == player)
+                return +10;
+            else if(b.get_cell(0,2) == opponent)
+                return -10;
+        }
+        
+        // Else if none of them have won then return 0
+        return 0;
+    }
+
+    /*This is the minimax function. It considers all
+    the possible ways the game can go and returns
+    the value of the board*/
+    int minimax(BOARD board, int depth, bool isMax, char algorithm, char bot){
+        int score = evaluate(board, algorithm, bot);
+        
+        /*If Maximizer has won the game return his/her
+        evaluated score*/
+        if(score == 10)
+            return score - depth;
+
+        /*If Minimizer has won the game return his/her
+        evaluated score*/
+        if(score == -10)
+            return score + depth;
+        /*If there are no more moves and no winner then
+        it is a tie*/
+        if(!board.isMoveLeft())
+            return 0;
+
+        // If this maximizer's move
+        if(isMax){
+            int best = -1000;
+
+            // Traverse all cells
+            for(int i = 0; i<3; i++){
+                for(int j = 0; j<3; j++){
+
+                    // Check if cell is empty
+                    if(board.get_cell(i, j) == ' '){
+                        // Make the move
+                        BOARD nb = board;
+                        nb.make_move(algorithm, i, j);
+
+                         // Call minimax recursively and choose
+                        // the maximum value
+                        best = max(best, minimax(nb, depth+1, false, algorithm, bot));
+                    }
+                }
+            }
+            return best;
+        }
+
+        // If this minimizer's move
+        else{
+            int best = 1000;
+
+            // Traverse all cells
+            for(int i = 0; i<3; i++){
+                for(int j = 0; j<3; j++){
+                     // Check if cell is empty
+                    if(board.get_cell(i, j) == ' '){
+                        // Make the move
+                        BOARD nb = board;
+                        nb.make_move(bot, i, j);
+
+
+                        // Call minimax recursively and choose
+                        // the minimum value
+                        best = min(best, minimax(nb, depth+1, true, algorithm, bot));
+                    }
+                }
+            }
+            return best;
+        }
+    }
+
+public:
+
+    struct Move {
+        int row, col;
+    };
+    char symbol;
+    Optimal_algorithm(char symbol = 'O') : symbol(symbol){}
+
+    // This will return the best possible move
+    Move findBestMove(BOARD &board, char algorithm, char bot){
+        int bestVal = -1000;
+        Move bestMove = {-1, -1};
+
+        /*Traverse all cells, evaluate minimax function for
+        all empty cells. And return the cell with optimal value.*/
+        for(int i = 0; i<3; i++){
+            for(int j = 0; j<3; j++){
+                // Check if cell is empty
+                if(board.get_cell(i, j) == ' '){
+                    // Make the move
+                    BOARD nb = board;
+                    nb.make_move(algorithm, i, j);
+
+                    // compute evaluation function for this move.
+                    int moveVal = minimax(nb, 0, false, algorithm, bot);
+
+                    /*If the value of the current move is 
+                    more than the best value, then update best*/
+                    if(moveVal > bestVal){
+                        bestVal = moveVal;
+                        bestMove = {i, j};
+                    }
+                }
+            }
+        }
+        return bestMove;
     }
 };
 
@@ -378,11 +554,11 @@ class BOT {
         float reward = 0;
 
         if(result == WIN) {
-            reward = 0.1;
+            reward = 0.2;
         } else if(result == LOSS) {
-            reward = -0.1;
+            reward = -0.05;
         } else if(result == DRAW) {
-            reward = 0.05; // Give a smaller reward for drawing to prefer it over losing
+            reward = 0.1; // Give a smaller reward for drawing to prefer it over losing
         }
 
         // Apply reward to all moves made in the game
@@ -437,6 +613,14 @@ class BOT {
                 for(short y = 0; y < 3; ++y) {
                     sum_of_scores += genomes[canon_board][x*3 + y];
                 }
+            }
+        }
+
+        if(sum_of_scores == 0){
+            if(board.isMoveLeft()){
+                sum_of_scores = 1;
+            } else {
+                return{-1,-1};
             }
         }
 
@@ -574,6 +758,120 @@ class BOT {
 
         file.close();
         return true;
+    }
+};
+
+
+class TicTacToeMiniMax{
+    private:
+    bool curr_player;
+    BOARD board;
+
+    const char BOT_SYMBOL = 'X';
+    const char MINIMAX_SYMBOL = 'O';
+
+    /**
+     * @brief Switches the current player.
+     */
+    void switch_player(void) {
+        curr_player = !curr_player; // Toggles 0 and 1
+    }
+
+    public:
+    // O BOT de Aprendizado (Maximizer no Minimax)
+    BOT X;
+    // O Jogador Perfeito Minimax
+    Optimal_algorithm minimax_o;
+    
+    // Construtor: Inicializa os jogadores com seus símbolos
+    TicTacToeMiniMax() 
+        : curr_player(0), board(), X(BOT_SYMBOL), minimax_o(MINIMAX_SYMBOL) {}
+
+    /**
+     * @brief Roda um jogo entre o BOT de Aprendizado (X) e o Minimax (O).
+     * @param print Se deve imprimir o tabuleiro a cada turno.
+     * @return short: O resultado do jogo (WIN, LOSS, DRAW) para o BOT 'X'.
+     */
+    short botVSminimax(const bool& print = true) {
+        board.reset_board();
+        X.clear_history();
+        curr_player = 0; // X começa
+
+        short result = DRAW;
+        pair<short, short> move = {-1, -1};
+
+        // Main game loop
+        while(true) {
+            if(print)
+                board.draw_board();
+
+            // ----------------------------------------------------
+            // 1. TURNO DO BOT DE APRENDIZADO ('X')
+            // ----------------------------------------------------
+            if(curr_player == 0) {
+                // O BOT escolhe o movimento usando a Roleta
+                move = X.choose_move(board); 
+                
+                // O BOT registra o movimento antes de fazê-lo (para a lógica de aprendizado)
+                // Nota: O método choose_move já registra o movimento em last_game
+
+                if(print) {
+                    cout << "Player X (BOT) plays: " << move.first << ", " << move.second << endl;
+                    cout << "Possible moves (Chromosomes): ";
+                    X.print_genome(board, move);
+                }
+                
+                board.make_move(BOT_SYMBOL, move.first, move.second);
+                
+                // Checa vitória para 'X'
+                if(board.check_win(move.first, move.second)) {
+                    result = WIN;
+                    if(print) { board.draw_board(); cout << "Player X (BOT) won!\n"; }
+                    break;
+                }
+            }
+            
+            // ----------------------------------------------------
+            // 2. TURNO DO MINIMAX ('O')
+            // ----------------------------------------------------
+            else {
+                // O Minimax encontra o melhor movimento
+                Optimal_algorithm::Move minimax_move = 
+                    minimax_o.findBestMove(board, MINIMAX_SYMBOL, BOT_SYMBOL);
+                
+                move = {minimax_move.row, minimax_move.col};
+
+                if(print) {
+                    cout << "Player O (Minimax) plays: " << move.first << ", " << move.second << endl;
+                }
+                
+                board.make_move(MINIMAX_SYMBOL, move.first, move.second);
+
+                // Checa vitória para 'O'
+                if(board.check_win(move.first, move.second)) {
+                    result = LOSS;
+                    if(print) { board.draw_board(); cout << "Player O (Minimax) won!\n"; }
+                    break;
+                }
+            }
+
+            // ----------------------------------------------------
+            // 3. CHECAGEM DE EMPATE
+            // ----------------------------------------------------
+            if(board.full()) {
+                result = DRAW;
+                if(print) { board.draw_board(); cout << "It's a draw!\n"; }
+                break;
+            }
+
+            switch_player();
+        }
+        
+        // ----------------------------------------------------
+        // 4. APRENDIZADO DO BOT
+        // ----------------------------------------------------
+        X.update_genomes(result);
+        return result;
     }
 };
 

@@ -5,7 +5,7 @@
 #define INDIVIDUALS 6
 float MIN_MUT = 0.05, MAX_MUT = 0.3;
 float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
-#define ROUNDS 10
+#define ROUNDS 100
 #define CROSSOVER_ROUNDS 5
 
 class POPULATION {
@@ -28,10 +28,10 @@ class POPULATION {
             BOT aux('X');
             pop[i] = {aux, 0};
         }
-        for(int i = 1; i < INDIVIDUALS; i += 2) {
-            BOT aux('O');
-            pop[i] = {aux, 0};
-        }
+        //for(int i = 1; i < INDIVIDUALS; i += 2) {
+          //  BOT aux('O');
+            //pop[i] = {aux, 0};
+        //}
         
         BEST = {pop[0]};
     }
@@ -88,8 +88,9 @@ class POPULATION {
             
         for(int i = 1; i < INDIVIDUALS; i++) {
             BOT child;
-            if(i % 2) child.symbol = 'X'; else child.symbol = 'O';
+            //if(i % 2) child.symbol = 'X'; else child.symbol = 'O';
             // The child has all the BEST's genomes
+            child.symbol = 'X';
             child.genomes = BEST.first.genomes;
 
             for(auto& [board_state, genome] : pop[i].first.genomes) {
@@ -171,10 +172,94 @@ class POPULATION {
             }
         }        
     }
+
+    void train_population_minimax(bool print = false, bool save_load = false) {
+    
+    // Supondo que pop é um vetor de BOTs de Aprendizado (pop.size() == INDIVIDUALS)
+
+    if (save_load) {
+        // Carregamento: Assumindo que todos os BOTs são 'X'
+        for (int i = 0; i < INDIVIDUALS; ++i) {
+            string file_name = "X";
+            file_name.push_back(i + '0');
+            file_name.append(".txt");
+            pop[i].first.load_genomes(file_name); // pop[i].first é o BOT
+        }
+    }
+
+    // 1. Instancia o Minimax Player fixo, que será o oponente 'O'
+    Optimal_algorithm fixed_minimax_o('O');
+    
+    // Setup Random Number Generator (Não mais necessário para shuffle, mas mantido se for usado no crossover)
+    //auto rng = default_random_engine(time(NULL));
+
+    for (int j = 0; j < ROUNDS; j++) {
+        // ***********************************************
+        // REMOVER: Não há necessidade de shuffle se o oponente é fixo.
+        // ***********************************************
+        // shuffle(pop.begin(), pop.end(), rng); 
+
+        // Simulates rounds
+        for (int i = 0; i < INDIVIDUALS; ++i) { // Iterar sobre todos os BOTs 'X'
+            
+            // 2. Cria o controlador TicTacToeMiniMax
+            // É necessário um construtor que aceite um BOT X e um Minimax O
+            // Seu construtor atual é: TicTacToeMiniMax() : X('X'), minimax_o('O').
+            // Se você quer que o BOT pop[i].first seja testado, você precisa de um construtor
+            // ou uma maneira de substituir o BOT interno da classe.
+            
+            // *** ASSUMINDO NOVO CONSTRUTOR: TicTacToeMiniMax(BOT& x_bot, Optimal_algorithm& o_bot) ***
+
+            // Exemplo de como usar sua estrutura atual (se o BOT for movido/copiado):
+            // Isso pode ser complexo, a melhor abordagem é criar um novo controlador
+            // que aceite o BOT a ser treinado e o Minimax fixo.
+            
+            TicTacToeMiniMax game;
+            game.X = pop[i].first; // Atribui o BOT de Aprendizado atual ao controlador
+            // game.minimax_o já está inicializado como 'O'
+
+            // 3. Roda o jogo: BOT 'X' vs. Minimax 'O'
+            // O resultado é do ponto de vista do BOT 'X'.
+            int result = game.botVSminimax(print); 
+
+            // 4. Atualiza a pontuação e substitui o BOT (agora com genomas atualizados)
+            
+            // O update_genomes já ocorreu dentro de game.botVSminimax
+            // Aqui, apenas atualizamos o BOT na população e sua pontuação de performance.
+            pop[i].first = game.X; 
+
+            if (result == WIN) {
+                pop[i].second += 1;
+            } else if (result == LOSS) {
+                pop[i].second -= 1;
+            } 
+            // Se for DRAW (0), a pontuação (pop[i].second) não muda.
+        }
+
+        // 5. Impressão e Crossover (ajustado para INDIVIDUALS)
+        for (int i = 0; i < INDIVIDUALS; ++i) {
+            cout << "WIN/DRAW RATE BOT " << i << ": " << pop[i].second << endl;
+        }
+        
+        if (j % CROSSOVER_ROUNDS == 0) // Cria uma nova geração a cada X rodadas
+            crossover();
+    }
+    
+    if (save_load) {
+        // Salvamento: Assumindo que todos os BOTs são 'X'
+        for (int i = 0; i < INDIVIDUALS; ++i) {
+            string file_name = "X";
+            file_name.push_back(i + '0');
+            file_name.append(".txt");
+            pop[i].first.save_genomes(file_name);
+        }
+    }
+}
 };
 
 int main(void) {
     POPULATION p;
-    p.train_population(true, false);
+    //p.train_population(true, false);
+    p.train_population_minimax(true,false);
     return 0;
 }
