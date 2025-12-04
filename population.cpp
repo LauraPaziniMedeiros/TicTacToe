@@ -60,7 +60,7 @@ class POPULATION {
             {
                 int noise = noiseDist(rng);
                 int m = g + static_cast<int>(std::round(noise));
-                m = std::min(1, m);
+                m = std::max(1, m);
                 mutated.push_back(m);
             }
             else
@@ -130,6 +130,11 @@ class POPULATION {
 
         // Setup Random Number Generator
         auto rng = default_random_engine(time(NULL));
+
+        pair<int, pair<int, int>> winrate_table[INDIVIDUALS];
+        for (int i = 0; i < INDIVIDUALS; i++){
+            winrate_table[i] = {0, {0, 0}};
+        }
         for(int j = 0; j < ROUNDS; j++) {
             // This ensures random matchmaking every generation
             shuffle(pop.begin(), pop.end(), rng);
@@ -140,22 +145,24 @@ class POPULATION {
                 pop[i+1].first.symbol = 'O';
                 TicTacToeBOT game(pop[i].first, pop[i+1].first);
                 int result = game.botVSbot(print);
-                if(result == DRAW) {
-                    pop[i] = {game.players[0], pop[i].second};
-                    pop[i+1] = {game.players[1], pop[i+1].second};
-                }
-                else if(result == WIN) { // X won
-                    pop[i] = {game.players[0], pop[i].second + 1};
-                    pop[i+1] = {game.players[1], pop[i+1].second - 1};
-                }
-                else { // O won
-                    pop[i] = {game.players[0], pop[i].second - 1};
-                    pop[i+1] = {game.players[1], pop[i+1].second + 1};
+                if (result == WIN) {
+                    pop[i].second += 1;
+                    pop[i+1].second -= 1;
+                    winrate_table[i].first++;
+                    winrate_table[i+1].second.second++;
+                } else if (result == LOSS) {
+                    pop[i].second -= 1;
+                    pop[i + 1].second += 1;
+                    winrate_table[i + 1].first++;
+                    winrate_table[i].second.second++;
+                } else if (result == DRAW) {
+                    winrate_table[i].second.first++;
+                    winrate_table[i+1].second.first++;
                 }
             }
-            for(int i = 0; i < INDIVIDUALS; i += 2) {
-                cout << "WIN RATE BOT " << i << ": " << pop[i].second << endl;
-                cout << "WIN RATE BOT " << i+1 << ": " << pop[i+1].second << endl;
+            for (int i = 0; i < INDIVIDUALS; ++i)
+            {
+                cout << "WIN/DRAW RATE BOT " << i << ": WINS: " << winrate_table[i].first << " DRAWS: " << winrate_table[i].second.first << " LOSSES: " << winrate_table[i].second.second << endl;
             }
             if(j % CROSSOVER_ROUNDS == 0) // Creates a new generation every defined number of rounds
                 crossover();
@@ -192,6 +199,11 @@ class POPULATION {
     
     // Setup Random Number Generator (Não mais necessário para shuffle, mas mantido se for usado no crossover)
     //auto rng = default_random_engine(time(NULL));
+
+    pair<int,pair<int, int>> winrate_table[INDIVIDUALS];
+    for(int i = 0; i < INDIVIDUALS; i++){
+        winrate_table[i] = {0, {0, 0}};
+    }
 
     for (int j = 0; j < ROUNDS; j++) {
         // ***********************************************
@@ -230,17 +242,22 @@ class POPULATION {
 
             if (result == WIN) {
                 pop[i].second += 1;
+                winrate_table[i].first++;
             } else if (result == LOSS) {
                 pop[i].second -= 1;
-            } 
+                winrate_table[i].second.second++;
+            } else if (result == DRAW) {
+                winrate_table[i].second.first++;
+            }
             // Se for DRAW (0), a pontuação (pop[i].second) não muda.
         }
 
         // 5. Impressão e Crossover (ajustado para INDIVIDUALS)
-        for (int i = 0; i < INDIVIDUALS; ++i) {
-            cout << "WIN/DRAW RATE BOT " << i << ": " << pop[i].second << endl;
+        for (int i = 0; i < INDIVIDUALS; ++i)
+        {
+            cout << "WIN/DRAW RATE BOT " << i << ": WINS: " << winrate_table[i].first << " DRAWS: " << winrate_table[i].second.first << " LOSSES: " << winrate_table[i].second.second << endl;
         }
-        
+
         if (j % CROSSOVER_ROUNDS == 0) // Cria uma nova geração a cada X rodadas
             crossover();
     }
@@ -259,7 +276,7 @@ class POPULATION {
 
 int main(void) {
     POPULATION p;
-    //p.train_population(true, false);
+    //p.train_population(true, true);
     p.train_population_minimax(true,false);
     return 0;
 }
