@@ -1,4 +1,3 @@
-
 #include "Board.h"
 #include "Bot.cpp"
 #include "Optimal_algorithm.cpp"
@@ -176,6 +175,100 @@ class TicTacToeBOT {
 
             switch_player();
         }
+        return result;
+    }
+};
+
+class TicTacToePlayer{
+    private:
+    bool curr_player; // 0 = P1, 1 = P2
+    BOARD board;
+    
+    BOT* bot_ref;
+    
+    char P1_SYMBOL; // Símbolo de quem começa
+    char P2_SYMBOL; // Símbolo de quem joga em segundo
+
+    void switch_player(void) {
+        curr_player = !curr_player; 
+    }
+
+    public:
+    // Construtor: Recebe o BOT por referência.
+    TicTacToePlayer(BOT& bot) 
+        : curr_player(0), board(), bot_ref(&bot) {}
+
+    /**
+     * @brief Roda um jogo onde o BOT pode ser P1 ('X') ou P2 ('O') contra o player.
+     * @param bot_is_x: Se TRUE, BOT é 'X' e player é 'O'. Se FALSE, BOT é 'O' e player é 'X'.
+     * @return short: O resultado do jogo (WIN, LOSS, DRAW) para o BOT evolutivo.
+     */
+    short run_game(bool bot_is_x, const bool& print = true) {
+        P1_SYMBOL = bot_is_x ? 'X' : 'O'; // P1: BOT ou player
+        P2_SYMBOL = bot_is_x ? 'O' : 'X'; // P2: player ou BOT
+        
+        board.reset_board();
+        bot_ref->clear_history();
+        curr_player = 0; // P1 sempre começa
+
+        bot_ref->symbol = bot_is_x ? 'X' : 'O';
+
+        short result = DRAW;
+        pair<short, short> move = {-1, -1};
+
+        while(true) {
+            if(print) board.draw_board();
+
+            // Determina quem joga e qual é o símbolo
+            bool current_player_is_bot = (curr_player == 0 && bot_is_x) || (curr_player == 1 && !bot_is_x);
+            char current_symbol = curr_player == 0 ? P1_SYMBOL : P2_SYMBOL;
+
+            if(current_player_is_bot) {
+                // Turnto do BOT de Aprendizado
+                move = bot_ref->choose_move(board); 
+                
+                if(print) {
+                    cout << "Player " << current_symbol << " (BOT) plays: " << move.first << ", " << move.second << endl;
+                    cout << "Possible moves (Chromosomes): ";
+                    // Chamada a print_genome deve usar o BOT, que é referenciado por bot_ref
+                    bot_ref->print_genome(board, move);
+                }
+            } else {
+                // Turnto do player
+                int x = -1, y = -1;
+                while(!board.valid_move(x, y)) {
+                    cout << "Choose a valid row (1-3) and a collumn (1-3)";
+                    cin >> x >> y;
+                    x --; y --;
+                    
+                    move = {x, y};
+                }
+                
+                if(print) {
+                    cout << "Player " << current_symbol << " (User) plays: " << move.first << ", " << move.second << endl;
+                }
+            }
+
+            board.make_move(current_symbol, move.first, move.second);
+
+            // Checagem de vitória/empate
+            if(board.check_win(move.first, move.second)) {
+                result = current_player_is_bot ? WIN : LOSS;
+                if(print) { board.draw_board(); cout << "Player " << current_symbol << " won!\n"; }
+                break;
+            }
+
+            if(board.full()) {
+                result = DRAW;
+                if(print) { board.draw_board(); cout << "It's a draw!\n"; }
+                break;
+            }
+
+            switch_player();
+        }
+        
+        // APRENDIZADO DO BOT: O genoma do objeto original pop[i].first é atualizado.
+        bot_ref->update_genomes(result);
         return result;
     }
 };

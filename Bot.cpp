@@ -378,7 +378,7 @@ class BOT {
             // Write the board key (9 characters)
             for (int i = 0; i < 9; ++i) {
                 // Use a placeholder for the empty cell to avoid file parsing issues
-                file << (board_key[i] == EMPTY_CELL ? '_' : board_key[i]);
+               file << (board_key[i] == EMPTY_CELL ? '_' : board_key[i]);
             }
             
             // Separator

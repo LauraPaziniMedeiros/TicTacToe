@@ -1,11 +1,11 @@
-#include "genetic_algorithm.cpp"
+#include "Play.cpp"
 #include <algorithm>
 
 // Config
 #define INDIVIDUALS 6
 float MIN_MUT = 0.05, MAX_MUT = 0.3;
 float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
-#define ROUNDS 300
+#define ROUNDS 6
 #define CROSSOVER_ROUNDS 5
 
 class POPULATION {
@@ -256,17 +256,59 @@ class POPULATION {
     
     // 4. Salvamento
     if (save_load) {
+        cout << "GENOMA\n";
+        for(auto g : BEST.first.genomes[{' ',' ',' ',' ',' ',' ',' ',' ',' '}]) {
+            cout << g << " ";
+        }
+        cout << endl;
+        BEST.first.save_genomes("BEST.txt");
         for (int i = 0; i < INDIVIDUALS; ++i) {
             string file_name = "X" + to_string(i) + ".txt";
             pop[i].first.save_genomes(file_name);
         }
     }
 }
+
+void train_player(bool print = false, bool save_load = false) {
+    
+    // (Lógica de Carregamento/Inicialização MANTIDA)
+    if (save_load) {
+        BEST.first.load_genomes("BEST.txt");
+    }
+
+    TicTacToePlayer game(BEST.first);
+    game.run_game(true, true);
+    
+    // 4. Salvamento
+    if (save_load) {
+        BEST.first.save_genomes("BEST.txt");
+    }
+}
 };
 
 int main(void) {
     POPULATION p;
-    //p.train_population(true, true);
-    p.train_population_minimax(true,true);
+
+    int opc;
+    
+    cout << "------------ MENU -------------\n";
+    cout << "Choose 1 to train the population\n";
+    cout << "Choose 2 to play against the bot BOT\n";
+    cin >> opc;
+
+    switch (opc)
+    {
+    case 1:
+        p.train_population_minimax(true,true);
+        break;
+    
+    case 2:
+        p.train_player(true, true);
+        break;
+    
+    default:
+        break;
+    }
+    
     return 0;
 }
