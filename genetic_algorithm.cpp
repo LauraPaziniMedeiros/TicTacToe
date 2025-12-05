@@ -599,7 +599,7 @@ class BOT {
      * @param board the current game's board.
      */
     pair<short, short> choose_move(BOARD board) {
-        mt19937 rng(std::random_device{}());
+        mt19937 rng(random_device{}());
         int rotation;
         bool flip;
         auto canon = get_canonical(board.grid, {0,0}, &rotation, &flip);
@@ -609,16 +609,16 @@ class BOT {
             new_board_state(canon_board);
         }
 
-        std::vector<int> weights;
+        vector<long long> weights;
         for (int i = 0; i < 9; ++i){
             weights.push_back(genomes[canon_board][i]);
         }
 
-        long long sum_of_scores = std::accumulate(weights.begin(), weights.end(), 0LL);
+        long long sum_of_scores = accumulate(weights.begin(), weights.end(), 0LL);
 
         if (sum_of_scores == 0){
             if (board.isMoveLeft()){
-                std::fill(weights.begin(), weights.end(), 1);
+                fill(weights.begin(), weights.end(), 1);
             }
             else
             {
@@ -626,7 +626,7 @@ class BOT {
             }
         }
 
-        std::discrete_distribution<int> dist(weights.begin(), weights.end());
+        std::discrete_distribution<long long> dist(weights.begin(), weights.end());
         int index = dist(rng);
 
         auto raw = unget_canonical(canon_board, {index / 3, index % 3}, rotation, flip);
