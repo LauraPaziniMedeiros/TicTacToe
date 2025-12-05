@@ -1,5 +1,5 @@
 all:
-	g++ genetic_algorithm.cpp population.cpp -o a -Wall -Werror
+	g++ Board.cpp Bot.cpp Optimal_algorithm.cpp Play.cpp population.cpp main.cpp -o a -Wall
 
 run: all
 	./a
