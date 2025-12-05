@@ -9,6 +9,7 @@
 #include <random>
 #include <fstream>
 #include <sstream>
+#include <numeric>
 using namespace std;
 
 const char EMPTY_CELL = ' '; // Defines an empty cell for the game board
@@ -598,43 +599,37 @@ class BOT {
      * @param board the current game's board.
      */
     pair<short, short> choose_move(BOARD board) {
-        // Stores the sum of the chromossomes's scores
-        int sum_of_scores = 0;
+        mt19937 rng(std::random_device{}());
         int rotation;
         bool flip;
         auto canon = get_canonical(board.grid, {0,0}, &rotation, &flip);
         auto& canon_board = canon.first;
 
-        if(genomes.count(canon_board) == 0) { // Creates a new genome
-            sum_of_scores = new_board_state(canon_board);
+        if (genomes.count(canon_board) == 0){
+            new_board_state(canon_board);
         }
-        else {
-            for(short x = 0; x < 3; ++x) {
-                for(short y = 0; y < 3; ++y) {
-                    sum_of_scores += genomes[canon_board][x*3 + y];
-                }
+
+        std::vector<int> weights;
+        for (int i = 0; i < 9; ++i){
+            weights.push_back(genomes[canon_board][i]);
+        }
+
+        long long sum_of_scores = std::accumulate(weights.begin(), weights.end(), 0LL);
+
+        if (sum_of_scores == 0){
+            if (board.isMoveLeft()){
+                std::fill(weights.begin(), weights.end(), 1);
+            }
+            else
+            {
+                return {-1, -1};
             }
         }
 
-        if(sum_of_scores == 0){
-            if(board.isMoveLeft()){
-                sum_of_scores = 1;
-            } else {
-                return{-1,-1};
-            }
-        }
+        std::discrete_distribution<int> dist(weights.begin(), weights.end());
+        int index = dist(rng);
 
-        // Picks a valid move at random based on a "Roulette Wheel Selection"
-        int random_pick = rand() % sum_of_scores;
-        int current_sum = 0;
-        int index = 0;
-        for(; index < 9; ++index) {
-            current_sum += genomes[canon_board][index];
-            if(random_pick < current_sum)
-                break;
-        }
         auto raw = unget_canonical(canon_board, {index / 3, index % 3}, rotation, flip);
-        // Registers move
         last_game.push_back(raw.first);
         moves.push_back(raw.second);
 

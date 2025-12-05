@@ -5,7 +5,7 @@
 #define INDIVIDUALS 6
 float MIN_MUT = 0.05, MAX_MUT = 0.3;
 float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
-#define ROUNDS 100
+#define ROUNDS 300
 #define CROSSOVER_ROUNDS 5
 
 class POPULATION {
@@ -252,11 +252,6 @@ class POPULATION {
 
         if (j % CROSSOVER_ROUNDS == 0 && j != 0)
             crossover();
-            
-        // Reseta a tabela para a próxima rodada
-        for(int i = 0; i < INDIVIDUALS; i++){
-            winrate_table[i] = {0, {0, 0}};
-        }
     }
     
     // 4. Salvamento
@@ -272,6 +267,6 @@ class POPULATION {
 int main(void) {
     POPULATION p;
     //p.train_population(true, true);
-    p.train_population_minimax(true,false);
+    p.train_population_minimax(true,true);
     return 0;
 }
