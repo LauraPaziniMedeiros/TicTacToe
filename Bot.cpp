@@ -201,6 +201,14 @@ class BOT {
 
     BOT(char symbol = 'X') : symbol(symbol) {}
 
+    BOT& operator=(const BOT& other) {
+        this->last_game = other.last_game;
+        this->moves = other.moves;
+        this->genomes = other.genomes;
+        this->symbol = other.symbol;
+        return *this;
+    }
+
     /**
      * @brief Clears the bot's history regarding the last game played.
      * This function does not reset the bot's genomes.

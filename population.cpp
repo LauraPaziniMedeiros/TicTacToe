@@ -2,7 +2,7 @@
 #include <algorithm>
 
 // Config
-#define INDIVIDUALS 6
+#define INDIVIDUALS 2
 float MIN_MUT = 0.05, MAX_MUT = 0.3;
 float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
 #define ROUNDS 6
@@ -24,16 +24,13 @@ class POPULATION {
      * @brief creates a population of bots (alternating symbols) and with 0 wins.
      */
     POPULATION() : pop(INDIVIDUALS), BEST(), stagnation(0), MUTATION_RATE(MIN_MUT) {
-        for(int i = 0; i < INDIVIDUALS; i += 2) {
+        for(int i = 0; i < INDIVIDUALS; i++) {
             BOT aux('X');
             pop[i] = {aux, 0};
         }
-        //for(int i = 1; i < INDIVIDUALS; i += 2) {
-          //  BOT aux('O');
-            //pop[i] = {aux, 0};
-        //}
         
         BEST = {pop[0]};
+        BEST.second = INT32_MIN;
     }
 
     void update_mutation_rate() {
@@ -78,7 +75,7 @@ class POPULATION {
         vector<pair<BOT, int>> new_pop;
         // Updates BEST and the stagnation rate
         if(BEST.second < pop[0].second) {
-            BEST = pop[0];
+            this->BEST.first = pop[0].first;
             stagnation = 0;
         }
         else
@@ -256,11 +253,6 @@ class POPULATION {
     
     // 4. Salvamento
     if (save_load) {
-        cout << "GENOMA\n";
-        for(auto g : BEST.first.genomes[{' ',' ',' ',' ',' ',' ',' ',' ',' '}]) {
-            cout << g << " ";
-        }
-        cout << endl;
         BEST.first.save_genomes("BEST.txt");
         for (int i = 0; i < INDIVIDUALS; ++i) {
             string file_name = "X" + to_string(i) + ".txt";
