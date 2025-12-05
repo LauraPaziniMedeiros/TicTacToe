@@ -1,11 +1,11 @@
-#include "genetic_algorithm.cpp"
+#include "Play.cpp"
 #include <algorithm>
 
 // Config
-#define INDIVIDUALS 6
+#define INDIVIDUALS 2
 float MIN_MUT = 0.05, MAX_MUT = 0.3;
 float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
-#define ROUNDS 10
+#define ROUNDS 6
 #define CROSSOVER_ROUNDS 5
 
 class POPULATION {
@@ -24,16 +24,13 @@ class POPULATION {
      * @brief creates a population of bots (alternating symbols) and with 0 wins.
      */
     POPULATION() : pop(INDIVIDUALS), BEST(), stagnation(0), MUTATION_RATE(MIN_MUT) {
-        for(int i = 0; i < INDIVIDUALS; i += 2) {
+        for(int i = 0; i < INDIVIDUALS; i++) {
             BOT aux('X');
-            pop[i] = {aux, 0};
-        }
-        for(int i = 1; i < INDIVIDUALS; i += 2) {
-            BOT aux('O');
             pop[i] = {aux, 0};
         }
         
         BEST = {pop[0]};
+        BEST.second = INT32_MIN;
     }
 
     void update_mutation_rate() {
@@ -60,7 +57,7 @@ class POPULATION {
             {
                 int noise = noiseDist(rng);
                 int m = g + static_cast<int>(std::round(noise));
-                m = std::min(1, m);
+                m = std::max(1, m);
                 mutated.push_back(m);
             }
             else
@@ -78,7 +75,7 @@ class POPULATION {
         vector<pair<BOT, int>> new_pop;
         // Updates BEST and the stagnation rate
         if(BEST.second < pop[0].second) {
-            BEST = pop[0];
+            this->BEST.first = pop[0].first;
             stagnation = 0;
         }
         else
@@ -88,8 +85,9 @@ class POPULATION {
             
         for(int i = 1; i < INDIVIDUALS; i++) {
             BOT child;
-            if(i % 2) child.symbol = 'X'; else child.symbol = 'O';
+            //if(i % 2) child.symbol = 'X'; else child.symbol = 'O';
             // The child has all the BEST's genomes
+            child.symbol = 'X';
             child.genomes = BEST.first.genomes;
 
             for(auto& [board_state, genome] : pop[i].first.genomes) {
@@ -129,6 +127,11 @@ class POPULATION {
 
         // Setup Random Number Generator
         auto rng = default_random_engine(time(NULL));
+
+        pair<int, pair<int, int>> winrate_table[INDIVIDUALS];
+        for (int i = 0; i < INDIVIDUALS; i++){
+            winrate_table[i] = {0, {0, 0}};
+        }
         for(int j = 0; j < ROUNDS; j++) {
             // This ensures random matchmaking every generation
             shuffle(pop.begin(), pop.end(), rng);
@@ -139,22 +142,24 @@ class POPULATION {
                 pop[i+1].first.symbol = 'O';
                 TicTacToeBOT game(pop[i].first, pop[i+1].first);
                 int result = game.botVSbot(print);
-                if(result == DRAW) {
-                    pop[i] = {game.players[0], pop[i].second};
-                    pop[i+1] = {game.players[1], pop[i+1].second};
-                }
-                else if(result == WIN) { // X won
-                    pop[i] = {game.players[0], pop[i].second + 1};
-                    pop[i+1] = {game.players[1], pop[i+1].second - 1};
-                }
-                else { // O won
-                    pop[i] = {game.players[0], pop[i].second - 1};
-                    pop[i+1] = {game.players[1], pop[i+1].second + 1};
+                if (result == WIN) {
+                    pop[i].second += 1;
+                    pop[i+1].second -= 1;
+                    winrate_table[i].first++;
+                    winrate_table[i+1].second.second++;
+                } else if (result == LOSS) {
+                    pop[i].second -= 1;
+                    pop[i + 1].second += 1;
+                    winrate_table[i + 1].first++;
+                    winrate_table[i].second.second++;
+                } else if (result == DRAW) {
+                    winrate_table[i].second.first++;
+                    winrate_table[i+1].second.first++;
                 }
             }
-            for(int i = 0; i < INDIVIDUALS; i += 2) {
-                cout << "WIN RATE BOT " << i << ": " << pop[i].second << endl;
-                cout << "WIN RATE BOT " << i+1 << ": " << pop[i+1].second << endl;
+            for (int i = 0; i < INDIVIDUALS; ++i)
+            {
+                cout << "WIN/DRAW RATE BOT " << i << ": WINS: " << winrate_table[i].first << " DRAWS: " << winrate_table[i].second.first << " LOSSES: " << winrate_table[i].second.second << endl;
             }
             if(j % CROSSOVER_ROUNDS == 0) // Creates a new generation every defined number of rounds
                 crossover();
@@ -171,10 +176,131 @@ class POPULATION {
             }
         }        
     }
+
+   void train_population_minimax(bool print = false, bool save_load = false) {
+    
+    // (Lógica de Carregamento/Inicialização MANTIDA)
+    if (save_load) {
+        for (int i = 0; i < INDIVIDUALS; ++i) {
+            // Assumimos que o load não é mais estritamente atrelado ao símbolo 'X' ou 'O', 
+            // mas usamos 'X' para manter a convenção de salvamento.
+            string file_name = "X" + to_string(i) + ".txt";
+            pop[i].first.load_genomes(file_name); 
+            pop[i].first.symbol = 'X'; // Definimos o símbolo base
+        }
+    } else {
+        for (int i = 0; i < INDIVIDUALS; ++i) {
+            pop[i].first.symbol = 'X'; // Definimos o símbolo base
+        }
+    }
+
+    // 1. Instancia o Minimax Player fixo
+    Optimal_algorithm fixed_minimax('O'); // O Minimax precisa de um símbolo para inicializar
+    
+    // Inicialização da Tabela para esta Rodada de ROUNDS
+    vector<pair<int, pair<int, int>>> winrate_table(INDIVIDUALS, {0, {0, 0}}); 
+
+    for (int j = 0; j < ROUNDS; j++) {
+        
+        // Simulates rounds
+        for (int i = 0; i < INDIVIDUALS; ++i) { // Iterar sobre todos os BOTs evolutivos
+            
+            // 2. Cria o controlador, passando o BOT por REFERÊNCIA
+            TicTacToeMiniMax game(pop[i].first, fixed_minimax); 
+
+            // --- Jogo 1: BOT é 'X' (Primeiro a jogar) ---
+            // 'true' significa que o BOT é 'X'
+            int result_x = game.run_game(true, print); 
+            
+            // Atualiza a pontuação (result_x é do ponto de vista do BOT)
+            if (result_x == WIN) {
+                pop[i].second += 1;
+                winrate_table[i].first++;
+            } else if (result_x == LOSS) {
+                pop[i].second -= 1;
+                winrate_table[i].second.second++;
+            } else if (result_x == DRAW) {
+                winrate_table[i].second.first++;
+            }
+
+            // --- Jogo 2: BOT é 'O' (Segundo a jogar) ---
+            // 'false' significa que o BOT é 'O'
+            int result_o = game.run_game(false, print); 
+            
+            // Atualiza a pontuação (result_o é do ponto de vista do BOT)
+            if (result_o == WIN) {
+                pop[i].second += 1;
+                winrate_table[i].first++;
+            } else if (result_o == LOSS) {
+                pop[i].second -= 1;
+                winrate_table[i].second.second++;
+            } else if (result_o == DRAW) {
+                winrate_table[i].second.first++;
+            }
+        }
+        
+        // 3. Impressão e Crossover
+        for (int i = 0; i < INDIVIDUALS; ++i)
+        {
+            cout << "WIN/DRAW RATE BOT " << i << " (Total): WINS: " << winrate_table[i].first 
+                 << " DRAWS: " << winrate_table[i].second.first 
+                 << " LOSSES: " << winrate_table[i].second.second << endl;
+        }
+
+        if (j % CROSSOVER_ROUNDS == 0 && j != 0)
+            crossover();
+    }
+    
+    // 4. Salvamento
+    if (save_load) {
+        BEST.first.save_genomes("BEST.txt");
+        for (int i = 0; i < INDIVIDUALS; ++i) {
+            string file_name = "X" + to_string(i) + ".txt";
+            pop[i].first.save_genomes(file_name);
+        }
+    }
+}
+
+void train_player(bool print = false, bool save_load = false) {
+    
+    // (Lógica de Carregamento/Inicialização MANTIDA)
+    if (save_load) {
+        BEST.first.load_genomes("BEST.txt");
+    }
+
+    TicTacToePlayer game(BEST.first);
+    game.run_game(true, true);
+    
+    // 4. Salvamento
+    if (save_load) {
+        BEST.first.save_genomes("BEST.txt");
+    }
+}
 };
 
 int main(void) {
     POPULATION p;
-    p.train_population(true, false);
+
+    int opc;
+    
+    cout << "------------ MENU -------------\n";
+    cout << "Choose 1 to train the population\n";
+    cout << "Choose 2 to play against the bot BOT\n";
+    cin >> opc;
+
+    switch (opc)
+    {
+    case 1:
+        p.train_population_minimax(true,true);
+        break;
+    
+    case 2:
+        p.train_player(true, true);
+        break;
+    
+    default:
+        break;
+    }
+    
     return 0;
 }
