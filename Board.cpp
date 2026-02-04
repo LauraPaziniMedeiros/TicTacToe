@@ -1,11 +1,5 @@
 #include "Board.h" 
-#include <iostream>
-#include <vector>
-
 using namespace std;
-
-// O conteúdo da classe BOARD { ... } FOI REMOVIDO daqui.
-// Apenas as implementações dos métodos são mantidas.
 
 /**
  * @brief Constructs an empty Tic-Tac-Toe board.
@@ -15,7 +9,7 @@ BOARD::BOARD() : used_cells(0), grid(9) {
 }
 
 /**
- * @brief Resets the board to its default settings
+ * @brief Resets the board to its default settings.
  */
 void BOARD::reset_board(void) {
     for (auto& symbol : grid)
@@ -24,7 +18,10 @@ void BOARD::reset_board(void) {
 }
 
 /**
- * @brief Checks if a move is valid.
+ * @brief Checks if a move is valid given the current board state.
+ * @param x x coordinate (int between 0 and 2).
+ * @param y y coordinate (int between 0 and 2).
+ * @returns TRUE if the move is valid, FALSE otherwise.
  */
 bool BOARD::valid_move(short int x, short int y) {
     // Move is out of bounds
@@ -53,9 +50,10 @@ void BOARD::draw_board(void) {
 }
 
 /**
- * @brief Checks if there are moves left on the board.
+ * @brief Checks if there are any valid moves left on the board.
+ * @returns TRUE if another move can be made, FALSE otherwise.
  */
-bool BOARD::isMoveLeft(void){
+bool BOARD::move_available(void){
     for(int i = 0; i<9; i++) 
         if(grid[i] == EMPTY_CELL)
             return true;
@@ -64,6 +62,7 @@ bool BOARD::isMoveLeft(void){
 
 /**
  * @brief Checks if the board is full (resulting in a draw).
+ * @returns TRUE if the board is full, FALSE otherwise.
  */
 bool BOARD::full(void) {
     return used_cells == 9;
@@ -71,6 +70,10 @@ bool BOARD::full(void) {
 
 /**
  * @brief Places a player's symbol on the board.
+ * @param player the player's symbol
+ * @param x x coordinate (int between 0 and 2).
+ * @param y y coordinate (int between 0 and 2).
+ * @returns FALSE if there aren't any valid moves left, TRUE if a move is made.
  */
 bool BOARD::make_move(char player, short int x, short int y) {
     if(!valid_move(x, y))
@@ -83,6 +86,7 @@ bool BOARD::make_move(char player, short int x, short int y) {
 
 /**
  * @brief Checks if the last move resulted in a win.
+ * @returns TRUE if the last player won, FALSE otherwise.
  */
 bool BOARD::check_win(short int x, short int y) {
     char symbol = grid[x*3 +y];
@@ -108,6 +112,9 @@ bool BOARD::check_win(short int x, short int y) {
 
 /**
  * @brief Gets the symbol at a specific cell.
+ * @param x x coordinate (int between 0 and 2).
+ * @param y y coordinate (int between 0 and 2).
+ * @returns '?' if the coordinates are invalid.
  */
 char BOARD::get_cell(short int x, short int y) const {
     if (x < 0 || x > 2 || y < 0 || y > 2) {
