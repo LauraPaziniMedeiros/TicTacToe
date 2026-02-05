@@ -168,7 +168,7 @@ bool BOT::canon_valid_move(vector<char> canon, short x, short y) {
  * @param canon_genomes the rotated/flipped genomes
  * @param rotation the number of 90º rotations
  * @param flip if the genomes were flipped or not
- * @return Ther raw genomes.
+ * @return The raw genomes.
  */
 vector<long long> BOT::raw_genomes(const vector<long long>& canon_genomes, 
     const int& rotation, const bool& flip

@@ -25,10 +25,7 @@
         vector<char> grid;
 
         BOARD();
-        void reset_board(void);
-        
-        // Methods prototypes
-        
+        void reset_board(void);        
         bool valid_move(short int x, short int y);
         void draw_board(void);
         bool move_available(void);
