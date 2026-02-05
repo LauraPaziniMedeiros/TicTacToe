@@ -1,11 +1,11 @@
 all:
-	g++ Board.cpp Bot.cpp Optimal_algorithm.cpp Play.cpp population.cpp -o a -Wall -Werror
+	g++ Board.cpp Bot.cpp Optimal_algorithm.cpp Play.cpp population.cpp -o game -Wall -Werror
 
 run: all
-	./a
+	./game
 
 runtxt: all
-	./a >output.txt 2>&1
+	./game
 
 clean:
-	rm a *.txt
+	rm game results/*.txt
