@@ -5,7 +5,7 @@ using namespace std;
  * @brief Initiates a BOT with a given symbol.
  * @param symbol The bot's symbol in the gameboard.
  */
-BOT::BOT(char symbol = 'X') : symbol(symbol) {}
+BOT::BOT(char symbol) : symbol(symbol) {}
 
 BOT& BOT::operator=(const BOT& other) {
     this->last_game = other.last_game;

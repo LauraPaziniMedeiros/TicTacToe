@@ -1,7 +1,7 @@
 #ifndef PLAY_H
     #define PLAY_H
     #include "Board.h"
-    #include "Bot.cpp"
+    #include "Bot.h"
     #include "Optimal_algorithm.cpp"
     using namespace std;
 
@@ -34,7 +34,7 @@
         bool curr_player; // 0 = p0, 1 = p1
         BOARD board;
 
-        void TicTacToeBOT::switch_player(void);
+        void switch_player(void);
 
         public:
         array<BOT, 2> players; // Stores each player (BOT)

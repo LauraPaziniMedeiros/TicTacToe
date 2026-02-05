@@ -66,7 +66,7 @@ class Optimal_algorithm{
             return score + depth;
         /*If there are no more moves and no winner then
         it is a tie*/
-        if(!board.isMoveLeft())
+        if(!board.move_available())
             return 0;
 
         // If this maximizer's move

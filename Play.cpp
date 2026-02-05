@@ -24,7 +24,7 @@ TicTacToeMiniMax::TicTacToeMiniMax(BOT& bot, Optimal_algorithm& minimax)
  * FALSE: the bot is represented by 'O' on the board.
  * @return The BOT's result in this game (WIN, LOSS or DRAW).
  */
-short TicTacToeMiniMax::run_game(bool bot_is_x, const bool& print = true) {
+short TicTacToeMiniMax::run_game(bool bot_is_x, const bool& print) {
     P1_SYMBOL = bot_is_x ? 'X' : 'O'; // P1: BOT or Minimax
     P2_SYMBOL = bot_is_x ? 'O' : 'X'; // P2: Minimax or BOT
     
@@ -107,7 +107,7 @@ TicTacToeBOT::TicTacToeBOT(BOT& X, BOT& O) : curr_player(0), board(), players{X,
  * @param print Boolean to turn on console printing of the game. Default = true.
  * @return Game's result based on player 1 (WIN, LOSS or DRAW).
  */
-short TicTacToeBOT::botVSbot(const bool& print = true) {
+short TicTacToeBOT::botVSbot(const bool& print) {
     // Clears memory
     board.reset_board();
 
@@ -183,7 +183,7 @@ TicTacToePlayer::TicTacToePlayer(BOT& bot)
  * @param bot_is_x: If TRUE, the bot is represented by 'X' on the board, if FALSE, by 'O'.
  * @return The BOT's result in this game (WIN, LOSS or DRAW).
  */
-short TicTacToePlayer::run_game(bool bot_is_x, const bool& print = true) {
+short TicTacToePlayer::run_game(bool bot_is_x, const bool& print) {
     P1_SYMBOL = bot_is_x ? 'X' : 'O'; // P1: BOT or player
     P2_SYMBOL = bot_is_x ? 'O' : 'X'; // P2: player or BOT
     

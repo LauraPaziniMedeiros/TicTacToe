@@ -44,7 +44,7 @@
         // The bot's symbol on the board
         char symbol;
 
-        BOT(char symbol);
+        BOT(char symbol = 'X');
         BOT& operator=(const BOT& other);
         void clear_history(void);
         void register_move(const vector<char>& grid, const short& x, const short& y);
