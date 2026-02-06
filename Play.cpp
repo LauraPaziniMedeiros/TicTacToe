@@ -12,11 +12,9 @@ void TicTacToeMiniMax::switch_player(void) {
 
 /**
  * @brief Class constructor, initializes the game's variables.
- * @param bot A BOT class object.
- * @param minimax A Optimal_algorithm class object.
  */
-TicTacToeMiniMax::TicTacToeMiniMax(BOT& bot, Optimal_algorithm& minimax) 
-    : curr_player(0), board(), bot_ref(&bot), minimax_ref(&minimax) {}
+TicTacToeMiniMax::TicTacToeMiniMax() 
+    : curr_player(0), board(), bot(), minimax() {}
 
 /**
  * @brief Runs a game between a BOT and an optimal algorithm.
@@ -29,7 +27,7 @@ short TicTacToeMiniMax::run_game(bool bot_is_x, const bool& print) {
     P2_SYMBOL = bot_is_x ? 'O' : 'X'; // P2: Minimax or BOT
     
     board.reset_board();
-    bot_ref->clear_history();
+    bot.clear_history();
     curr_player = 0; // P1 always starts
 
     short result = DRAW;
@@ -43,17 +41,17 @@ short TicTacToeMiniMax::run_game(bool bot_is_x, const bool& print) {
         char current_symbol = curr_player == 0 ? P1_SYMBOL : P2_SYMBOL;
 
         if(current_player_is_bot) {
-            move = bot_ref->choose_move(board); 
+            move = bot.choose_move(board); 
             
             if(print) {
                 cout << "Player " << current_symbol << " (BOT) plays: " << move.first << ", " << move.second << endl;
                 cout << "Possible moves (Chromosomes): ";
-                bot_ref->print_genome(board, move);
+                bot.print_chromossome(board, move);
             }
         } else {
             char opponent_symbol = current_symbol == 'X' ? 'O' : 'X';
             Optimal_algorithm::Move minimax_move = 
-                minimax_ref->findBestMove(board, current_symbol, opponent_symbol);
+                minimax.findBestMove(board, current_symbol, opponent_symbol);
             
             move = {(short)minimax_move.row, (short)minimax_move.col};
 
@@ -81,7 +79,7 @@ short TicTacToeMiniMax::run_game(bool bot_is_x, const bool& print) {
     }
     
     // Updates de bot's genome
-    bot_ref->update_genomes(result);
+    bot.update_genome(result);
     return result;
 }
 
@@ -99,7 +97,7 @@ void TicTacToeBOT::switch_player(void) {
  * @param X BOT class object represented by 'X'
  * @param O BOT class object represented by 'O'
  */
-TicTacToeBOT::TicTacToeBOT(BOT& X, BOT& O) : curr_player(0), board(), players{X, O}{}
+TicTacToeBOT::TicTacToeBOT(BOT& X, BOT& O) : curr_player(0), board(), players{&X, &O}{}
 
 /**
  * @brief An auto-player between two bots competing against
@@ -122,28 +120,28 @@ short TicTacToeBOT::botVSbot(const bool& print) {
             board.draw_board();
 
         // Chooses the next move based on previous games
-        move = players[curr_player].choose_move(board); // Guaranteed valid move
+        move = players[curr_player]->choose_move(board); // Guaranteed valid move
         // Prints the bot's chance of picking each move
         if(print) {
             cout << "Possible moves: ";
-            players[curr_player].print_genome(board, move);
+            players[curr_player]->print_chromossome(board, move);
         }
         if(print) {
-            cout << "Player " << players[curr_player].symbol << ", make a move (row and column): ";
+            cout << "Player " << players[curr_player]->symbol << ", make a move (row and column): ";
             cout << move.first << " " << move.second << endl;
         }
             
-        board.make_move(players[curr_player].symbol, move.first, move.second);
+        board.make_move(players[curr_player]->symbol, move.first, move.second);
 
         // Stops the game if the current player won
         if(board.check_win(move.first, move.second)) {
             if(print) {
                 board.draw_board();
-                cout << "Player " << players[curr_player].symbol << " won!\n";
+                cout << "Player " << players[curr_player]->symbol << " won!\n";
             }
-            players[curr_player].update_genomes(WIN);
-            players[!curr_player].update_genomes(LOSS);
-            if(players[curr_player].symbol == 'X') result = WIN; else result = LOSS;
+            players[curr_player]->update_genome(WIN);
+            players[!curr_player]->update_genome(LOSS);
+            if(players[curr_player]->symbol == 'X') result = WIN; else result = LOSS;
             break;
         }
 
@@ -153,8 +151,8 @@ short TicTacToeBOT::botVSbot(const bool& print) {
                 board.draw_board();
                 cout << "It's a draw!\n";
             }
-            players[curr_player].update_genomes(DRAW);
-            players[!curr_player].update_genomes(DRAW);
+            players[curr_player]->update_genome(DRAW);
+            players[!curr_player]->update_genome(DRAW);
             break;
         }
 
@@ -209,7 +207,7 @@ short TicTacToePlayer::run_game(bool bot_is_x, const bool& print) {
             if(print) {
                 cout << "Player " << current_symbol << " (BOT) plays: " << move.first << ", " << move.second << endl;
                 cout << "Possible moves (Chromosomes): ";
-                bot_ref->print_genome(board, move);
+                bot_ref->print_chromossome(board, move);
             }
         } else {
             int x = -1, y = -1;
@@ -245,6 +243,6 @@ short TicTacToePlayer::run_game(bool bot_is_x, const bool& print) {
     }
     
     // Updates de bot's genome
-    bot_ref->update_genomes(result);
+    bot_ref->update_genome(result);
     return result;
 }

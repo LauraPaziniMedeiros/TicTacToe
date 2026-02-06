@@ -10,7 +10,7 @@ BOT::BOT(char symbol) : symbol(symbol) {}
 BOT& BOT::operator=(const BOT& other) {
     this->last_game = other.last_game;
     this->moves = other.moves;
-    this->genomes = other.genomes;
+    this->genome = other.genome;
     this->symbol = other.symbol;
     return *this;
 }
@@ -164,16 +164,16 @@ bool BOT::canon_valid_move(vector<char> canon, short x, short y) {
 }
 
 /***
- * @brief Un-rotates and un-flips canon genomes.
- * @param canon_genomes the rotated/flipped genomes
+ * @brief Un-rotates and un-flips a canon chromossome.
+ * @param canon_chrom the rotated/flipped chromossome
  * @param rotation the number of 90º rotations
- * @param flip if the genomes were flipped or not
- * @return The raw genomes.
+ * @param flip if the chromossome was flipped or not
+ * @return The raw chromossome.
  */
-vector<long long> BOT::raw_genomes(const vector<long long>& canon_genomes, 
+vector<long long> BOT::raw_chromossome(const vector<long long>& canon_chrom, 
     const int& rotation, const bool& flip
 ) {
-    vector<long long> raw = canon_genomes;
+    vector<long long> raw = canon_chrom;
     // rotates
     int rotations = (4 - rotation) % 4;
     for(int i = 0; i < rotations; i++){
@@ -191,7 +191,7 @@ vector<long long> BOT::raw_genomes(const vector<long long>& canon_genomes,
 
 /**
  * @brief Clears the bot's history regarding the last game played.
- * This function does not reset the bot's genomes.
+ * This function does not reset the bot's genome.
  */
 void BOT::clear_history(void) {
     last_game.clear();
@@ -212,29 +212,33 @@ void BOT::register_move(const vector<char>& grid, const short& x, const short& y
 
 /***
  * @brief Generates chromossomes for a new board state
- * @param board the current board
+ * @param board the canon (flipped and rotated) board
  * @return The sum of all the new chromossomes' scores
  */
-int BOT::new_board_state(const vector<char>& canon_grid) {
-    vector<long long> new_genome(9, 0);
+int BOT::new_chromossome(const vector<char>& canon_grid) {
+    vector<long long> new_chrom(9, 0);
     int sum = 0;
     for(short x = 0; x < 3; x++) 
         for(short y = 0; y < 3; y++) 
             if(canon_valid_move(canon_grid, x, y)) {
-                new_genome[x*3 + y] = 100;
+                new_chrom[x*3 + y] = 100;
                 sum += 100;
             }
-                
-    genomes[canon_grid] = new_genome;
+
+    genome[canon_grid] = new_chrom;
+    cout << "NEW CHROMOSSOME ";
+    for(auto g : genome[canon_grid])
+        cout << g << " ";
+    cout << endl;
     return sum;
 }
 
 /**
- * @brief Updates the bot's genomes based on the game's outcome.
+ * @brief Updates the bot's genome based on the last game's outcome.
  * @param result Represents the result of the game: 
  * 1 if the bot won, -1 if it lost and 0 if it's a draw.
  */
-void BOT::update_genomes(const short& result) {
+void BOT::update_genome(const short& result) {
     int counter = 0;
     float reward = 0;
 
@@ -252,27 +256,29 @@ void BOT::update_genomes(const short& result) {
         vector<char>& canon_board = canon.first;
         pair<short, short>& canon_move = canon.second;
         short move_index = canon_move.first * 3 + canon_move.second;
-        
+
         // New state of the board
-        if(genomes.count(canon_board) == 0)
-            new_board_state(canon_board);
+        if(genome.count(canon_board) == 0)
+            new_chromossome(canon_board);
         
         // Unvalid move
-        if(genomes[canon_board][move_index] == 0) {
+        if(genome[canon_board][move_index] == 0) {
             counter++;
             continue;
         }
         
         // Apply the reward/penalty
         long long total = 0;
-        for(auto& g : genomes[canon_board])
-            total += g;
+        for(auto& gene : genome[canon_board])
+            total += gene;
             
-        long long new_chromossome = genomes[canon_board][move_index] + total * reward;
-        if(genomes[canon_board][move_index] > 0 && new_chromossome <= 0)
-            genomes[canon_board][move_index] = 1;
-        else
-            genomes[canon_board][move_index] = new_chromossome;
+        long long new_gene = genome[canon_board][move_index] + total * reward;
+        if(new_gene <= 0) {
+            // if(genome[canon_board][move_index] > 0)
+                genome[canon_board][move_index] = 1;
+            // else 
+            //     genome[canon_board][move_index] = 0;
+        } else genome[canon_board][move_index] = new_gene;
 
         counter++;
     }
@@ -291,31 +297,22 @@ pair<short, short> BOT::choose_move(BOARD board) {
     auto canon = get_canonical(board.grid, {0,0}, &rotation, &flip);
     auto& canon_board = canon.first;
 
-    if(genomes.count(canon_board) == 0) { // Creates a new genome
-        sum_of_scores = new_board_state(canon_board);
-    }
-    else {
+    if(genome.count(canon_board) == 0) { // Creates a new chromossome
+        sum_of_scores = new_chromossome(canon_board);
+    } else {
         for(short x = 0; x < 3; ++x) {
             for(short y = 0; y < 3; ++y) {
-                sum_of_scores += genomes[canon_board][x*3 + y];
+                sum_of_scores += genome[canon_board][x*3 + y];
             }
         }
     }
 
-    if(sum_of_scores == 0){
-        if(board.move_available()){
-            sum_of_scores = 1;
-        } else {
-            return{-1,-1};
-        }
-    }
-
     // Picks a valid move at random based on a "Roulette Wheel Selection"
-    int random_pick = rand() % sum_of_scores;
+    int random_pick = (rand() + 1) % sum_of_scores;
     int current_sum = 0;
     int index = 0;
     for(; index < 9; ++index) {
-        current_sum += genomes[canon_board][index];
+        current_sum += genome[canon_board][index];
         if(random_pick < current_sum)
             break;
     }
@@ -332,28 +329,28 @@ pair<short, short> BOT::choose_move(BOARD board) {
  * @param board The game's current board.
  * @param move The last move leading up to this board state.
  */
-void BOT::print_genome(const BOARD &board, const pair<short, short>& move) {
+void BOT::print_chromossome(const BOARD &board, const pair<short, short>& move) {
     int rotation;
     bool flip;
     auto canon = get_canonical(board.grid, move, &rotation, &flip);
-    if(genomes.count(canon.first) == 0){
+    if(genome.count(canon.first) == 0){
         cout << "This board state has no records\n";
         return;
     }
 
-    // Un-rotates the genomes
-    auto raw = raw_genomes(genomes[canon.first], rotation, flip);
+    // Un-rotates the chromossome to match the board printed onto the console
+    auto raw = raw_chromossome(genome[canon.first], rotation, flip);
     for(auto& genome : raw)
         cout << genome << " ";
     cout << endl;
 }
 
 /**
- * @brief Saves the bot's genomes map to a text file.
+ * @brief Saves the bot's genome map to a text file.
  * @param filename The name of the file to save to.
  * @return true if saving was successful, false otherwise.
  */
-bool BOT::save_genomes(const string& filename) {
+bool BOT::save_genome(const string& filename) {
     ofstream file(filename);
     if (!file.is_open()) {
         cerr << "Error: Could not open file for writing: " << filename << endl;
@@ -361,7 +358,7 @@ bool BOT::save_genomes(const string& filename) {
     }
 
     // Iterate through each map entry
-    for (const auto& entry : genomes) {
+    for (const auto& entry : genome) {
         const vector<char>& board_key = entry.first;
         const vector<long long>& scores = entry.second;
 
@@ -386,11 +383,11 @@ bool BOT::save_genomes(const string& filename) {
 }
 
 /**
- * @brief Loads the bot's genomes map from a text file.
+ * @brief Loads the bot's genome map from a text file.
  * @param filename The name of the file to load from.
  * @return true if loading was successful, false otherwise.
  */
-bool BOT::load_genomes(const string& filename) {
+bool BOT::load_genome(const string& filename) {
     ifstream file(filename);
     if (!file.is_open()) {
         // This is not a critical error if the file just doesn't exist yet
@@ -398,7 +395,7 @@ bool BOT::load_genomes(const string& filename) {
         return false;
     }
 
-    genomes.clear(); // Clear existing genomes before loading
+    genome.clear(); // Clear existing genomes before loading
     string line;
     int line_count = 0;
 
@@ -440,7 +437,7 @@ bool BOT::load_genomes(const string& filename) {
         }
 
         // Add the entry to the genomes map
-        genomes[board_key] = scores;
+        genome[board_key] = scores;
     }
 
     file.close();

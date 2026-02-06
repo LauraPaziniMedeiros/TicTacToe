@@ -6,7 +6,7 @@
 #define NUM_INDIV 6 // Should be an even number
 float MIN_MUT = 0.05, MAX_MUT = 0.3;
 float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
-#define ROUNDS 12 // How many rounds will be played
+#define ROUNDS 1 // How many rounds will be played
 #define CROSSOVER_ROUNDS 3 // How many rounds are played before a crossover happens
 
 /**
@@ -43,10 +43,10 @@ class POPULATION {
 
     /**
      * @brief Mutates a chromossome with the current mutation rate.
-     * @param genome The genome to be updated.
-     * @return The mutated genome.
+     * @param genome The chromossome to be updated.
+     * @return The mutated chromossome.
      */
-    vector<long long> mutate(vector<long long> genome)
+    vector<long long> mutate(vector<long long> chromossome)
     {
         vector<long long> mutated;
         // Instead of using the old rand() from C, I am using the random library from C++. rd is the random device that we use to generate the pseudo-random numbers, and rng is the generator, using Mersenne-Twister algorithm.
@@ -58,17 +58,17 @@ class POPULATION {
         normal_distribution<double> noiseDist(0.0, MUTATION_STEP);
 
         // This part of the code is the same, I just changed the calculations of the noise and the ceiling for the random number to use standard C++ functions.
-        for (auto &g : genome)
+        for (auto &gene : chromossome)
         {
             if (chanceDist(rng) <= MUTATION_RATE)
             {
                 int noise = noiseDist(rng);
-                int m = g + static_cast<int>(std::round(noise));
+                int m = gene + static_cast<int>(std::round(noise));
                 m = std::max(1, m);
                 mutated.push_back(m);
             }
             else
-                mutated.push_back(g);
+                mutated.push_back(gene);
         }
         return mutated;
     }
@@ -96,7 +96,7 @@ class POPULATION {
             stagnation++;
         else {
             // Saves the previous BEST win rate
-            ofstream file{"winrate.csv", ios_base::app};
+            ofstream file{"result/winrate.csv", ios_base::app};
             file << BEST.wins << "," << BEST.draws << "," << BEST.losses << endl;
         }
 
@@ -108,23 +108,22 @@ class POPULATION {
         for(int i = 0; i < NUM_INDIV; i++) {
             if(i == best_idx) continue;
 
-            BOT child;
-            // The child has all the BEST's genomes
-            child.genomes = BEST.bot.genomes;
+            // The child has all the BEST bot's chromossomes
+            BOT child = BEST.bot;
 
-            for(auto& [board_state, genome] : pop[i].bot.genomes) {
-                if(child.genomes.count(board_state)) { // Both parents have this genome
-                    // Average of both parent's genomes
+            for(auto& [board_state, chromossome] : pop[i].bot.genome) {
+                if(child.genome.count(board_state)) { // Both parents have this chromossome
+                    // Average of both parent's chromossomes
                     for(int j = 0; j < 9; j++) {
-                        child.genomes[board_state][j] += genome[j];
-                        child.genomes[board_state][j] /= 2;
+                        child.genome[board_state][j] += chromossome[j];
+                        child.genome[board_state][j] /= 2;
                     }
                 }
-                else // Only the current individual has this genome
-                    child.genomes[board_state] = genome;
+                else // Only the current individual has this chromossome
+                    child.genome[board_state] = chromossome;
                 // Applies mutation
                 update_mutation_rate();
-                child.genomes[board_state] = mutate(child.genomes[board_state]);
+                child.genome[board_state] = mutate(child.genome[board_state]);
             }
             new_pop.push_back({child, 0, 0, 0});
         }
@@ -154,14 +153,13 @@ class POPULATION {
      */
     void train_population(bool print = false, bool save_load = false) {
         if(save_load) {
-            BEST.bot.load_genomes("results/BEST.txt");
-
+            BEST.bot.load_genome("results/BEST.txt");
             for(int i = 0; i < NUM_INDIV; i += 2) {
                 BOT p1('X'), p2('O');
                 string file_name = "results/" + to_string(i) + ".txt";
-                p1.load_genomes(file_name);
+                p1.load_genome(file_name);
                 file_name = "results/" + to_string(i + 1) + ".txt";
-                p2.load_genomes(file_name);
+                p2.load_genome(file_name);
                 pop[i] = {p1, 0, 0, 0};
                 pop[i+1] = {p2, 0, 0, 0};
             }
@@ -190,6 +188,7 @@ class POPULATION {
                     pop[i + 1].draws++;
                 }
             }
+            
             // Creates a new generation every defined number of rounds
             if(j % CROSSOVER_ROUNDS == 0) {
                 crossover();
@@ -197,17 +196,17 @@ class POPULATION {
                 
         }
         if(save_load) {
-            BEST.bot.save_genomes("results/BEST.txt");
-            ofstream file{"winrate.csv", ios_base::app};
+            BEST.bot.save_genome("results/BEST.txt");
+            ofstream file{"results/winrate.csv", ios::app};
             file << BEST.wins << "," << BEST.draws << "," << BEST.losses << endl;
             
             for(int i = 0; i < NUM_INDIV; i += 2) {
                 string file_name = "results/" + to_string(i) + ".txt";
-                pop[i].bot.save_genomes(file_name);
+                pop[i].bot.save_genome(file_name);
                 file_name = "results/" + to_string(i + 1) + ".txt";
-                pop[i+1].bot.save_genomes(file_name);
+                pop[i+1].bot.save_genome(file_name);
             }
-        }        
+        }
     }
 
     /**
@@ -222,7 +221,7 @@ class POPULATION {
         if (save_load) {
             for (int i = 0; i < NUM_INDIV; ++i) {
                 string file_name = "results/" + to_string(i) + ".txt";
-                pop[i].bot.load_genomes(file_name); 
+                pop[i].bot.load_genome(file_name); 
                 pop[i].bot.symbol = 'X'; // Definimos o símbolo base
             }
         } else {
@@ -240,13 +239,13 @@ class POPULATION {
             for (int i = 0; i < NUM_INDIV; ++i) { // Iterar sobre todos os BOTs evolutivos
                 
                 // 2. Cria o controlador, passando o BOT por REFERÊNCIA
-                TicTacToeMiniMax game(pop[i].bot, fixed_minimax); 
+                TicTacToeMiniMax game; 
 
                 // --- Jogo 1: BOT é 'X' (Primeiro a jogar) ---
                 // 'true' significa que o BOT é 'X'
                 int result_x = game.run_game(true, print); 
                 
-                // Atualiza a pontuação (result_x é do ponto de vista do BOT)
+                // Atualiza a pontuação (run_gameresult_x é do ponto de vista do BOT)
                 if (result_x == WIN) {
                     pop[i].wins++;
                 } else if (result_x == LOSS) {
@@ -283,13 +282,13 @@ class POPULATION {
         
         // 4. Salvamento
         if (save_load) {
-            BEST.bot.save_genomes("results/BEST.txt");
-            ofstream file{"winrate.csv", ios_base::app};
+            BEST.bot.save_genome("results/BEST.txt");
+            ofstream file{"result/winrate.csv", ios_base::app};
             file << BEST.wins << "," << BEST.draws << "," << BEST.losses << endl;
             
             for (int i = 0; i < NUM_INDIV; ++i) {
                 string file_name = "results/" + to_string(i) + ".txt";
-                pop[i].bot.save_genomes(file_name);
+                pop[i].bot.save_genome(file_name);
             }
         }
     }
@@ -304,7 +303,7 @@ class POPULATION {
         
         // (Lógica de Carregamento/Inicialização MANTIDA)
         if (save_load) {
-            BEST.bot.load_genomes("results/BEST.txt");
+            BEST.bot.load_genome("results/BEST.txt");
         }
 
         TicTacToePlayer game(BEST.bot);
@@ -312,8 +311,8 @@ class POPULATION {
         
         // 4. Salvamento
         if (save_load) {
-            BEST.bot.save_genomes("results/BEST.txt");
-            ofstream file{"winrate.csv", ios_base::app};
+            BEST.bot.save_genome("results/BEST.txt");
+            ofstream file{"result/winrate.csv", ios_base::app};
             file << BEST.wins << "," << BEST.draws << "," << BEST.losses << endl;
         }
     }

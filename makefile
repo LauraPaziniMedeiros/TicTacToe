@@ -8,4 +8,4 @@ runtxt: all
 	./game
 
 clean:
-	rm game results/*.txt
+	rm game results/*

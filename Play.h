@@ -13,15 +13,15 @@
         private:
         bool curr_player; // 0 = P1, 1 = P2
         BOARD board;        
-        BOT* bot_ref;
-        Optimal_algorithm* minimax_ref;        
+        BOT bot;
+        Optimal_algorithm minimax;        
         char P1_SYMBOL; // Starting player's symbol
         char P2_SYMBOL; // Second player's symbol
 
         void switch_player(void);
 
         public:
-        TicTacToeMiniMax(BOT& bot, Optimal_algorithm& minimax);
+        TicTacToeMiniMax();
         short run_game(bool bot_is_x, const bool& print = true);
     };
 
@@ -37,7 +37,7 @@
         void switch_player(void);
 
         public:
-        array<BOT, 2> players; // Stores each player (BOT)
+        array<BOT*, 2> players; // Stores each player (BOT)
 
         TicTacToeBOT(BOT& X, BOT& O);
         short botVSbot(const bool& print = true);

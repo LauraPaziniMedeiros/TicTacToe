@@ -35,12 +35,12 @@
             const pair<short, short>& canon_move, 
             const int& rotation, const bool& flip);
         bool canon_valid_move(vector<char> canon, short x, short y);
-        vector<long long> raw_genomes(const vector<long long>& canon_genomes, 
+        vector<long long> raw_chromossome(const vector<long long>& canon_chrom, 
             const int& rotation, const bool& flip);
 
         public:
-        // 'genomes' maps a board state to a vector of 9 scores (one for each cell of the board)
-        map<vector<char>, vector<long long>> genomes;
+        // 'genome' maps every board state to a vector of 9 scores (one for each cell of the board)
+        map<vector<char>, vector<long long>> genome;
         // The bot's symbol on the board
         char symbol;
 
@@ -48,12 +48,12 @@
         BOT& operator=(const BOT& other);
         void clear_history(void);
         void register_move(const vector<char>& grid, const short& x, const short& y);
-        int new_board_state(const vector<char>& canon_grid);
-        void update_genomes(const short& result);
+        int new_chromossome(const vector<char>& canon_grid);
+        void update_genome(const short& result);
         pair<short, short> choose_move(BOARD board);
-        void print_genome(const BOARD &board, const pair<short, short>& move);
-        bool save_genomes(const string& filename);
-        bool load_genomes(const string& filename);
+        void print_chromossome(const BOARD &board, const pair<short, short>& move);
+        bool save_genome(const string& filename);
+        bool load_genome(const string& filename);
     };
 
 #endif
