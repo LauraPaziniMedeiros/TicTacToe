@@ -1,4 +1,5 @@
 #include "Bot.h"
+#include "Random64.cpp"
 using namespace std;
 
 /**
@@ -170,10 +171,10 @@ bool BOT::canon_valid_move(vector<char> canon, short x, short y) {
  * @param flip if the chromossome was flipped or not
  * @return The raw chromossome.
  */
-vector<long long> BOT::raw_chromossome(const vector<long long>& canon_chrom, 
+vector<unsigned long long> BOT::raw_chromossome(const vector<unsigned long long>& canon_chrom, 
     const int& rotation, const bool& flip
 ) {
-    vector<long long> raw = canon_chrom;
+    vector<unsigned long long> raw = canon_chrom;
     // rotates
     int rotations = (4 - rotation) % 4;
     for(int i = 0; i < rotations; i++){
@@ -216,8 +217,8 @@ void BOT::register_move(const vector<char>& grid, const short& x, const short& y
  * @return The sum of all the new chromossomes' scores
  */
 int BOT::new_chromossome(const vector<char>& canon_grid) {
-    vector<long long> new_chrom(9, 0);
-    int sum = 0;
+    vector<unsigned long long> new_chrom(9, 0);
+    int sum = 0; // Already sums the genes for the roulette wheel selection
     for(short x = 0; x < 3; x++) 
         for(short y = 0; y < 3; y++) 
             if(canon_valid_move(canon_grid, x, y)) {
@@ -226,10 +227,6 @@ int BOT::new_chromossome(const vector<char>& canon_grid) {
             }
 
     genome[canon_grid] = new_chrom;
-    cout << "NEW CHROMOSSOME ";
-    for(auto g : genome[canon_grid])
-        cout << g << " ";
-    cout << endl;
     return sum;
 }
 
@@ -268,16 +265,17 @@ void BOT::update_genome(const short& result) {
         }
         
         // Apply the reward/penalty
-        long long total = 0;
+        unsigned long long total = 0;
         for(auto& gene : genome[canon_board])
             total += gene;
             
-        long long new_gene = genome[canon_board][move_index] + total * reward;
+        unsigned long long new_gene = genome[canon_board][move_index] + total * reward;
         if(new_gene <= 0) {
-            // if(genome[canon_board][move_index] > 0)
+            // A valid move should remain available for playing
+            if(genome[canon_board][move_index] > 0)
                 genome[canon_board][move_index] = 1;
-            // else 
-            //     genome[canon_board][move_index] = 0;
+            else 
+                genome[canon_board][move_index] = 0;
         } else genome[canon_board][move_index] = new_gene;
 
         counter++;
@@ -291,7 +289,7 @@ void BOT::update_genome(const short& result) {
  */
 pair<short, short> BOT::choose_move(BOARD board) {
     // Stores the sum of the chromossomes's scores
-    int sum_of_scores = 0;
+    unsigned long long sum_of_scores = 0;
     int rotation;
     bool flip;
     auto canon = get_canonical(board.grid, {0,0}, &rotation, &flip);
@@ -308,8 +306,8 @@ pair<short, short> BOT::choose_move(BOARD board) {
     }
 
     // Picks a valid move at random based on a "Roulette Wheel Selection"
-    int random_pick = (rand() + 1) % sum_of_scores;
-    int current_sum = 0;
+    unsigned long long current_sum = 0;
+    unsigned long long random_pick = Random64::range(0, sum_of_scores - 1);
     int index = 0;
     for(; index < 9; ++index) {
         current_sum += genome[canon_board][index];
@@ -360,7 +358,7 @@ bool BOT::save_genome(const string& filename) {
     // Iterate through each map entry
     for (const auto& entry : genome) {
         const vector<char>& board_key = entry.first;
-        const vector<long long>& scores = entry.second;
+        const vector<unsigned long long>& scores = entry.second;
 
         // Write the board key (9 characters)
         for (int i = 0; i < 9; ++i) {
@@ -422,7 +420,7 @@ bool BOT::load_genome(const string& filename) {
         }
 
         // Read the 9 scores
-        vector<long long> scores(9);
+        vector<unsigned long long> scores(9);
         bool read_success = true;
         for (int i = 0; i < 9; ++i) {
             if (!(ss >> scores[i])) {

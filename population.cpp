@@ -1,12 +1,14 @@
 #include "Play.h"
 #include "Bot.h"
 #include <algorithm>
+#include <chrono>
+#include "Random64.cpp"
 
 /* EVOLUTION CONFIGURATIONS */
 #define NUM_INDIV 6 // Should be an even number
 float MIN_MUT = 0.05, MAX_MUT = 0.3;
 float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
-#define ROUNDS 1 // How many rounds will be played
+#define ROUNDS 9 // How many rounds will be played
 #define CROSSOVER_ROUNDS 3 // How many rounds are played before a crossover happens
 
 /**
@@ -43,29 +45,30 @@ class POPULATION {
 
     /**
      * @brief Mutates a chromossome with the current mutation rate.
-     * @param genome The chromossome to be updated.
+     * @param chromossome The chromossome to be updated.
      * @return The mutated chromossome.
      */
-    vector<long long> mutate(vector<long long> chromossome)
+    vector<unsigned long long> mutate(const vector<unsigned long long>& chromossome)
     {
-        vector<long long> mutated;
-        // Instead of using the old rand() from C, I am using the random library from C++. rd is the random device that we use to generate the pseudo-random numbers, and rng is the generator, using Mersenne-Twister algorithm.
-        random_device rd;
-        mt19937 rng(rd());
-
-        // The chance of mutating is defined by a random applied into an uniform distribution, while the noise is defined by a random choose in a normal distribution
-        uniform_real_distribution<double> chanceDist(0.0, 1.0);
-        normal_distribution<double> noiseDist(0.0, MUTATION_STEP);
-
-        // This part of the code is the same, I just changed the calculations of the noise and the ceiling for the random number to use standard C++ functions.
+        vector<unsigned long long> mutated;
+        mutated.reserve(chromossome.size()); // Pre-allocate memory to speed up push_back
+        
         for (auto &gene : chromossome)
         {
-            if (chanceDist(rng) <= MUTATION_RATE)
+            if (Random64::probability() <= MUTATION_RATE)
             {
-                int noise = noiseDist(rng);
-                int m = gene + static_cast<int>(std::round(noise));
-                m = std::max(1, m);
-                mutated.push_back(m);
+                double noise = Random64::deviation(0.0, MUTATION_STEP);
+                long long noiseInt = std::llround(noise);
+                /* If noise is negative AND its magnitude is greater than the gene,
+                the result would be negative. We clamp it to 1. */
+                if (noiseInt < 0 && gene < (unsigned long long)(-noiseInt)) {
+                    mutated.push_back(1);
+                } 
+                else {
+                    unsigned long long m = gene + noiseInt;
+                    // Final clamp to ensure we never drop below 1
+                    mutated.push_back(m < 1 ? 1 : m);
+                }
             }
             else
                 mutated.push_back(gene);
@@ -166,7 +169,7 @@ class POPULATION {
         }
 
         // Setup Random Number Generator
-        auto rng = default_random_engine(time(NULL));
+        mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
         for(int j = 0; j < ROUNDS; j++) {
             // This ensures random matchmaking every generation
             shuffle(pop.begin(), pop.end(), rng);

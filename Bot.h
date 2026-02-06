@@ -35,12 +35,12 @@
             const pair<short, short>& canon_move, 
             const int& rotation, const bool& flip);
         bool canon_valid_move(vector<char> canon, short x, short y);
-        vector<long long> raw_chromossome(const vector<long long>& canon_chrom, 
+        vector<unsigned long long> raw_chromossome(const vector<unsigned long long>& canon_chrom, 
             const int& rotation, const bool& flip);
 
         public:
         // 'genome' maps every board state to a vector of 9 scores (one for each cell of the board)
-        map<vector<char>, vector<long long>> genome;
+        map<vector<char>, vector<unsigned long long>> genome;
         // The bot's symbol on the board
         char symbol;
 
