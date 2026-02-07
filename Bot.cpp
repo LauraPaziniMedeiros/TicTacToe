@@ -1,5 +1,4 @@
 #include "Bot.h"
-#include "Random64.cpp"
 using namespace std;
 
 /**
@@ -285,9 +284,9 @@ void BOT::update_genome(const short& result) {
 /**
  * @brief Chooses the bot's next move and guarantees it's valid.
  * @param board the current game's board.
- * @return a pair with the coordinates of the bot's next move.
+ * @returns a pair with the coordinates of the bot's next move.
  */
-pair<short, short> BOT::choose_move(BOARD board) {
+pair<short, short> BOT::choose_move(const BOARD& board) {
     // Stores the sum of the chromossomes's scores
     unsigned long long sum_of_scores = 0;
     int rotation;

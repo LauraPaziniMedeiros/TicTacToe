@@ -1,11 +1,11 @@
 all:
-	g++ Board.cpp Bot.cpp Optimal_algorithm.cpp Play.cpp population.cpp -o game -Wall -Werror
+	g++ Board.cpp Random64.cpp Bot.cpp OptimalAlgorithm.cpp TicTacToe.cpp Population.cpp main.cpp -o game -Wall -Werror
 
 run: all
 	./game
 
-runtxt: all
-	./game
-
 clean:
-	rm game results/*
+	rm game
+
+purge:
+	rm results/* game

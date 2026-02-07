@@ -1,18 +1,15 @@
 #ifndef BOT_H
     #define BOT_H
 
-    #include <iostream>
     #include <array>
     #include <stdlib.h>
     #include <time.h>
-    #include <vector>
-    #include <map>
-    #include <string>
     #include <algorithm>
     #include <random>
     #include <fstream>
     #include <sstream>
     #include "Board.h"
+    #include "Random64.h"
     using namespace std;
 
     class BOT {
@@ -50,8 +47,8 @@
         void register_move(const vector<char>& grid, const short& x, const short& y);
         int new_chromossome(const vector<char>& canon_grid);
         void update_genome(const short& result);
-        pair<short, short> choose_move(BOARD board);
-        void print_chromossome(const BOARD &board, const pair<short, short>& move);
+        pair<short, short> choose_move(const BOARD& board);
+        void print_chromossome(const BOARD& board, const pair<short, short>& move);
         bool save_genome(const string& filename);
         bool load_genome(const string& filename);
     };
