@@ -1,4 +1,4 @@
-#include "OptimalAlgorithm.h"
+#include "header_files/OptimalAlgorithm.h"
 
 /**
  * @brief Generates a score based on the possibility of a win, draw or loss
