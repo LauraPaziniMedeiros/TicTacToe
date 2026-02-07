@@ -8,7 +8,7 @@
     #define NUM_INDIV 6 // Should be an even number
     const float MIN_MUT = 0.05, MAX_MUT = 0.3;
     const float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
-    #define ROUNDS 9 // How many rounds will be played
+    #define ROUNDS 6 // How many rounds will be played
     #define CROSSOVER_ROUNDS 3 // How many rounds are played before a crossover happens
 
     /**
@@ -37,6 +37,8 @@
 
         void update_mutation_rate(const bool& is_X);
         vector<unsigned long long> mutate(const vector<unsigned long long>& chromossome, const bool& is_X);
+        int update_bestX(void);
+        int update_bestO(void);
         void crossover(void);
 
         public:

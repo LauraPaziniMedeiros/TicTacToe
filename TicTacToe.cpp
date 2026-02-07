@@ -60,6 +60,7 @@ int BOTvsMINIMAX::run_game(bool print) {
                     board.draw_board();
                     cout << "The optimal algorithm ('" << minimax_symbol << "') won!\n";
                 }
+                bot.update_genome(LOSS);
                 return LOSS;
             }
         }
