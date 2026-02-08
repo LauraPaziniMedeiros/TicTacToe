@@ -50,139 +50,161 @@ vector<unsigned long long> POPULATION::mutate(const vector<unsigned long long>& 
     return mutated;
 }
 
-/**
- * @brief Updates BESTX if theres a better individual in X's population.
- * Also updates the stagnation rate and saves the previous best win rate.
- * @returns The new best individual index in the population vector (popX).
- */
-int POPULATION::update_bestX(void) {
-    // Finds the new BEST individual for X's population
-    int bestX_idx = -1;
-    for(int i = 0; i < NUM_INDIV/2; i++) {
-        if(popX[i].wins > BESTX.wins) {
-            BESTX = popX[i];
-            stagnationX = 0;
-            bestX_idx = i;
-        }
-        else if(popX[i].draws > BESTX.draws) {
-            BESTX = popX[i];
-            stagnationX = 0;
-            bestX_idx = i;
-        }
-        else if(popX[i].losses < BESTX.losses) {
-            BESTX = popX[i];
-            stagnationX = 0;
-            bestX_idx = i;
-        }
+void POPULATION::load_best(void) {
+    ifstream file("results/BESTwinrateX.bin");
+    if(!file.is_open()) {
+        cout << "Could not open file \"results/BESTwinrateX.bin\" for reading\n";
+        return;
     }
-    if(bestX_idx == -1) // BESTX remains unchanged
-        stagnationX++;
-    else { // Saves the previous BEST win rate
-        ofstream file{"results/winrateX.csv", ios_base::app};
-        file << BESTX.wins << "," << BESTX.draws << "," << BESTX.losses << endl;
-    }
-    BESTX.wins = BESTX.draws = BESTX.losses = 0;
+    string line;
+    getline(file, line);
+    stringstream ssX(line);
+    char separator;
+    ssX >> BESTX.wins >> separator >> BESTX.draws >> separator >> BESTX.losses;
+    file.close();
 
-    return bestX_idx;
+    file.open("results/BESTwinrateO.bin");
+    if(!file.is_open()) {
+        cout << "Could not open file \"results/BESTwinrateO.bin\" for reading\n";
+        return;
+    }
+    getline(file, line);
+    stringstream ssO(line);
+    ssO >> BESTO.wins >> separator >> BESTO.draws >> separator >> BESTO.losses;
+
+    BESTX.bot.load_genome("results/BESTX.txt");
+    BESTO.bot.load_genome("results/BESTO.txt");
 }
 
-/**
- * @brief Updates BESTO if theres a better individual in O's population.
- * Also updates the stagnation rate and saves the previous best win rate.
- * @returns The new best individual index in the population vector (popO).
- */
-int POPULATION::update_bestO(void) {
-    // Finds the new BEST individual for O's population
-    int bestO_idx = -1;
-    for(int i = 0; i < NUM_INDIV/2; i++) {
-        if(popO[i].wins > BESTO.wins) {
-            BESTO = popO[i];
-            stagnationO = 0;
-            bestO_idx = i;
-        }
-        else if(popO[i].draws > BESTO.draws) {
-            BESTO = popO[i];
-            stagnationO = 0;
-            bestO_idx = i;
-        }
-        else if(popO[i].losses < BESTO.losses) {
-            BESTO = popO[i];
-            stagnationO = 0;
-            bestO_idx = i;
-        }
+void POPULATION::save_best(void) {
+    ofstream file("results/BESTwinrateX.bin");
+    if(!file.is_open()) {
+        cout << "Could not open file \"results/BESTwinrateX.bin\" for writing\n";
+        return;
     }
-    if(bestO_idx == -1) // BESTO remains unchanged
-        stagnationO++;
-    else { // Saves the previous BEST win rate
-        ofstream file{"results/winrateO.csv", ios_base::app};
-        file << BESTO.wins << "," << BESTO.draws << "," << BESTO.losses << endl;
-    }
-    BESTO.wins = BESTO.draws = BESTO.losses = 0;
+    file << BESTX.wins << "," << BESTX.draws << "," << BESTX.losses << endl;
+    file.close();
 
-    return bestO_idx;
+    file.open("results/BESTwinrateO.bin");
+    if(!file.is_open()) {
+        cout << "Could not open file \"results/BESTwinrateO.bin\" for writing\n";
+        return;
+    }
+    file << BESTO.wins << "," << BESTO.draws << "," << BESTO.losses << endl;
+    file.close();
+
+    BESTX.bot.save_genome("results/BESTX.txt");
+    BESTO.bot.save_genome("results/BESTO.txt");
 }
 
 /**
  * @brief Creates a new population by crossing over the best
  * individual's chromossomes with every other bot in the population.
  */
-void POPULATION::crossover(void) {
-    // Finds the new BEST individual for X's population
-    int bestX_idx = update_bestX();
-    int bestO_idx = update_bestO();
+void POPULATION::crossover(const bool& save_load) {
+    // Sorts the population according to their win rate
+    sort(popX.begin(), popX.end(), [](const INDIVIDUAL& a, const INDIVIDUAL& b){
+        if(a.wins != b.wins) return a.wins > b.wins;
+        else if(a.draws != b.draws) return a.draws > b.draws;
+        return a.bot.genome.size() > b.bot.genome.size();
+    });
+    sort(popO.begin(), popO.end(), [](const INDIVIDUAL& a, const INDIVIDUAL& b){
+        if(a.wins != b.wins) return a.wins > b.wins;
+        else if(a.draws != b.draws) return a.draws > b.draws;
+        return a.bot.genome.size() > b.bot.genome.size();
+    });
 
-    // the best crosses over with every other individual and creates a new population
-    vector<INDIVIDUAL> new_popX, new_popO;
-    new_popX.push_back(BESTX);
-    new_popO.push_back(BESTO);
- 
-    for(int i = 0; i < NUM_INDIV/2; i++) {
-        // X's population   
-        if(i != bestX_idx) {
-            // The child has all the BEST bot's chromossomes
-            BOT child = BESTX.bot;
+    // Updates BEST
+    auto candidate_stats = make_tuple(popX[0].wins, popX[0].draws, popX[0].bot.genome.size());
+    auto best_stats = make_tuple(BESTX.wins, BESTX.draws, BESTX.bot.genome.size());
+    if(candidate_stats > best_stats) {
+        BESTX = popX[0];
+        stagnationX = 0;
+    } else stagnationX++;
+    candidate_stats = make_tuple(popO[0].wins, popO[0].draws, popO[0].bot.genome.size());
+    best_stats = make_tuple(BESTO.wins, BESTO.draws, BESTO.bot.genome.size());
+    if(candidate_stats > best_stats) {
+        BESTO = popO[0];
+        stagnationO = 0;
+    } else stagnationO++;
 
-            for(auto& [board_state, chromossome] : popX[i].bot.genome) {
-                if(child.genome.count(board_state)) { // Both parents have this chromossome
-                    // Average of both parent's chromossomes
-                    for(int j = 0; j < 9; j++) {
-                        child.genome[board_state][j] += chromossome[j];
-                        child.genome[board_state][j] /= 2;
-                    }
-                }
-                else // Only the current individual has this chromossome
-                    child.genome[board_state] = chromossome;
-                // Applies mutation
-                update_mutation_rate(true);
-                child.genome[board_state] = mutate(child.genome[board_state], true);
-            }
-            new_popX.push_back({child, 0, 0, 0});
+    /* Saves the best win rates for every new population
+    along with the BEST individuals stagnation rates*/
+    if(save_load) {
+        ofstream file{"results/ALLwinrateX.bin", ios_base::app};
+        if(!file.is_open()) {
+            cout << "Could not open file \"results/ALLwinrateX.bin\" for writing\n";
+            return;
         }
+        file << stagnationX << ",";
+        file << BESTX.wins << "," << BESTX.draws << "," << BESTX.losses << endl;
+        file.close();
+
+        file.open("results/ALLwinrateO.bin", ios_base::app);
+        if(!file.is_open()) {
+            cout << "Could not open file \"results/ALLwinrateO.bin\" for writing\n";
+            return;
+        }
+        file << stagnationO << ",";
+        file << BESTO.wins << "," << BESTO.draws << "," << BESTO.losses << endl;
+        file.close();
+    }
+
+    // Adjusts population for crossover
+    if(stagnationX == 0) popX.erase(popX.begin()); // New BEST
+    else popX.pop_back(); // Discards worst individual
+    if(stagnationO == 0) popO.erase(popO.begin()); // New BEST
+    else popO.pop_back(); // Discards worst individual
+
+    // the best reproduces with every other individual and creates a new population
+    vector<INDIVIDUAL> new_popX, new_popO;
+    new_popO.reserve(NUM_INDIV/2); new_popX.reserve(NUM_INDIV/2);
+    new_popX.push_back({BESTX.bot, 0, 0, 0});
+    new_popO.push_back({BESTO.bot, 0, 0, 0});
+
+    for(int i = 0; i < NUM_INDIV/2 - 1; i++) {
+        // X's population   
+        // The child has all the BEST bot's chromossomes
+        BOT child = BESTX.bot;
+        for(auto& [board_state, chromossome] : popX[i].bot.genome) {
+            if(child.genome.count(board_state)) { // Both parents have this chromossome
+                // Average of both parent's chromossomes
+                for(int j = 0; j < 9; j++) {
+                    child.genome[board_state][j] += chromossome[j];
+                    child.genome[board_state][j] /= 2;
+                }
+            } else // Only the current individual has this chromossome
+                child.genome[board_state] = chromossome;
+            // Applies mutation to each gene
+            update_mutation_rate(true);
+            for(auto& [board_state, chromossome] : child.genome) {
+                chromossome = mutate(chromossome, true);
+            }
+        }
+        new_popX.push_back({child, 0, 0, 0});
 
         // O's population
-        if(i != bestO_idx) {
-            // The child has all the BEST bot's chromossomes
-            BOT child = BESTO.bot;
-
-            for(auto& [board_state, chromossome] : popO[i].bot.genome) {
-                if(child.genome.count(board_state)) { // Both parents have this chromossome
-                    // Average of both parent's chromossomes
-                    for(int j = 0; j < 9; j++) {
-                        child.genome[board_state][j] += chromossome[j];
-                        child.genome[board_state][j] /= 2;
-                    }
+        // The child has all the BEST bot's chromossomes
+        child = BESTO.bot;
+        for(auto& [board_state, chromossome] : popO[i].bot.genome) {
+            if(child.genome.count(board_state)) { // Both parents have this chromossome
+                // Average of both parent's chromossomes
+                for(int j = 0; j < 9; j++) {
+                    child.genome[board_state][j] += chromossome[j];
+                    child.genome[board_state][j] /= 2;
                 }
-                else // Only the current individual has this chromossome
-                    child.genome[board_state] = chromossome;
-                // Applies mutation
-                update_mutation_rate(false);
-                child.genome[board_state] = mutate(child.genome[board_state], false);
+            } else // Only the current individual has this chromossome
+                child.genome[board_state] = chromossome;
+            // Applies mutation to each gene
+            update_mutation_rate(false);
+            for(auto& [board_state, chromossome] : child.genome) {
+                chromossome = mutate(chromossome, false);
             }
-            new_popO.push_back({child, 0, 0, 0});
         }
+        new_popO.push_back({child, 0, 0, 0});
     }
-    popX = new_popX;
-    popO = new_popO;
+    popX.clear(); popX = new_popX;
+    popO.clear(); popO = new_popO;
 }
 
 /**
@@ -215,9 +237,7 @@ stagnationX(0), stagnationO(0), mutation_rateX(MIN_MUT), mutation_rateO(MIN_MUT)
  */
 void POPULATION::train_botvsbot(bool print, bool save_load) {
     if(save_load) {
-        BESTX.bot.load_genome("results/BESTX.txt");
-        BESTO.bot.load_genome("results/BESTO.txt");
-
+        load_best();
         string filename;
         for(int i = 0; i < NUM_INDIV/2; i++) {
             filename = "results/X" + to_string(i) + ".txt";
@@ -229,7 +249,7 @@ void POPULATION::train_botvsbot(bool print, bool save_load) {
 
     // Setup Random Number Generator
     mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
-    for(int j = 0; j < ROUNDS; j++) {
+    for(int j = 1; j <= ROUNDS; j++) {
         // This ensures random matchmaking every round
         shuffle(popX.begin(), popX.end(), rng);
 
@@ -252,27 +272,24 @@ void POPULATION::train_botvsbot(bool print, bool save_load) {
         // Creates a new generation every defined number of rounds
         if(j % CROSSOVER_ROUNDS == 0) {
             // Prints win rates before creating a new population
-            for(int i = 0; i < NUM_INDIV/2; i++) {
-                cout << "WIN/DRAW RATE BOT X" << i << " (Total): WINS: " << popX[i].wins
-                    << " DRAWS: " << popX[i].draws
-                    << " LOSSES: " << popX[i].losses << endl;
-                cout << "WIN/DRAW RATE BOT O" << i << " (Total): WINS: " << popO[i].wins
-                    << " DRAWS: " << popO[i].draws
-                    << " LOSSES: " << popO[i].losses << endl;
+            if(print) {
+                for(int i = 0; i < NUM_INDIV/2; i++) {
+                    cout << "WIN/DRAW RATE BOT X" << i << " (Total): WINS: " << popX[i].wins
+                        << " DRAWS: " << popX[i].draws
+                        << " LOSSES: " << popX[i].losses << endl;
+                    cout << "WIN/DRAW RATE BOT O" << i << " (Total): WINS: " << popO[i].wins
+                        << " DRAWS: " << popO[i].draws
+                        << " LOSSES: " << popO[i].losses << endl;
+                }
             }
-            crossover();
+            
+            crossover(save_load);
         }
             
     }
 
-    // Updates the BEST bots before saving
-    update_bestO();
-    update_bestX();
-
     if(save_load) {
-        BESTX.bot.save_genome("results/BESTX.txt");
-        BESTO.bot.save_genome("results/BESTO.txt");
-
+        save_best();
         string filename;
         for(int i = 0; i < NUM_INDIV/2; i++) {
             filename = "results/X" + to_string(i) + ".txt";
@@ -291,11 +308,8 @@ void POPULATION::train_botvsbot(bool print, bool save_load) {
  * and saves the results after all the rounds are over.
  */
 void POPULATION::train_botvsminimax(bool print, bool save_load) {
-    // (Lógica de Carregamento/Inicialização MANTIDA)
     if (save_load) {
-        BESTX.bot.load_genome("results/BESTX.txt");
-        BESTO.bot.load_genome("results/BESTO.txt");
-
+        load_best();
         string filename;
         for(int i = 0; i < NUM_INDIV/2; i++) {
             filename = "results/X" + to_string(i) + ".txt";
@@ -305,7 +319,7 @@ void POPULATION::train_botvsminimax(bool print, bool save_load) {
         }
     }
 
-    for (int j = 0; j < ROUNDS; j++) {
+    for (int j = 1; j <= ROUNDS; j++) {
         for (int i = 0; i < NUM_INDIV/2; ++i) {
             // X plays first
             BOTvsMINIMAX gameX(popX[i].bot);
@@ -331,29 +345,27 @@ void POPULATION::train_botvsminimax(bool print, bool save_load) {
                 popO[i].draws++;
             }
         }
-        
-        for (int i = 0; i < NUM_INDIV/2; ++i) {
-            cout << "WIN/DRAW RATE BOT X" << i << " (Total): WINS: " << popX[i].wins
-                << " DRAWS: " << popX[i].draws
-                << " LOSSES: " << popX[i].losses << endl;
-            cout << "WIN/DRAW RATE BOT O" << i << " (Total): WINS: " << popO[i].wins
-                << " DRAWS: " << popO[i].draws
-                << " LOSSES: " << popO[i].losses << endl;
+
+        if (j % CROSSOVER_ROUNDS == 0) {
+            // Prints win rates before creating a new population
+            if(print) {
+                for(int i = 0; i < NUM_INDIV/2; i++) {
+                    cout << "WIN/DRAW RATE BOT X" << i << " (Total): WINS: " << popX[i].wins
+                        << " DRAWS: " << popX[i].draws
+                        << " LOSSES: " << popX[i].losses << endl;
+                    cout << "WIN/DRAW RATE BOT O" << i << " (Total): WINS: " << popO[i].wins
+                        << " DRAWS: " << popO[i].draws
+                        << " LOSSES: " << popO[i].losses << endl;
+                }
+            }
+
+            crossover(save_load);
         }
-
-        if (j % CROSSOVER_ROUNDS == 0)
-            crossover();
     }
-
-    // Updates the BEST bots before saving
-    update_bestO();
-    update_bestX();
     
     // 4. Salvamento
     if (save_load) {
-        BESTX.bot.save_genome("results/BESTX.txt");
-        BESTO.bot.save_genome("results/BESTO.txt");
-
+        save_best();
         string filename;
         for(int i = 0; i < NUM_INDIV/2; i++) {
             filename = "results/X" + to_string(i) + ".txt";

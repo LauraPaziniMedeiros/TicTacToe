@@ -3,13 +3,14 @@
     #include "TicTacToe.h"
     #include <algorithm>
     #include <chrono>
+    #include <tuple>
 
     /* EVOLUTION CONFIGURATIONS */
-    #define NUM_INDIV 6 // Should be an even number
+    #define NUM_INDIV 8 // Should be an even number
     const float MIN_MUT = 0.05, MAX_MUT = 0.3;
     const float MUTATION_STEP = (MAX_MUT - MIN_MUT)*2;
-    #define ROUNDS 6 // How many rounds will be played
-    #define CROSSOVER_ROUNDS 3 // How many rounds are played before a crossover happens
+    #define ROUNDS 4 // How many rounds will be played
+    #define CROSSOVER_ROUNDS 2 // How many rounds are played before a crossover happens
 
     /**
      * @struct INDIVIDUAL
@@ -37,9 +38,9 @@
 
         void update_mutation_rate(const bool& is_X);
         vector<unsigned long long> mutate(const vector<unsigned long long>& chromossome, const bool& is_X);
-        int update_bestX(void);
-        int update_bestO(void);
-        void crossover(void);
+        void load_best(void);
+        void save_best(void);
+        void crossover(const bool& save_load);
 
         public:
         POPULATION(void);
