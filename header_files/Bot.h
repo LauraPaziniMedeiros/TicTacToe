@@ -32,7 +32,7 @@
             const pair<short, short>& canon_move, 
             const int& rotation, const bool& flip);
         bool canon_valid_move(vector<char> canon, short x, short y);
-        vector<unsigned long long> raw_chromossome(const vector<unsigned long long>& canon_chrom, 
+        vector<unsigned long long> raw_chromosome(const vector<unsigned long long>& canon_chrom, 
             const int& rotation, const bool& flip);
 
         public:
@@ -45,10 +45,10 @@
         BOT& operator=(const BOT& other);
         void clear_history(void);
         void register_move(const vector<char>& grid, const short& x, const short& y);
-        int new_chromossome(const vector<char>& canon_grid);
+        int new_chromosome(const vector<char>& canon_grid);
         void update_genome(const short& result);
         pair<short, short> choose_move(const BOARD& board);
-        void print_chromossome(const BOARD& board, const pair<short, short>& move);
+        void print_chromosome(const BOARD& board, const pair<short, short>& move);
         bool save_genome(const string& filename);
         bool load_genome(const string& filename);
     };

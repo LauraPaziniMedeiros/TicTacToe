@@ -16,43 +16,37 @@ void POPULATION::update_mutation_rate(const bool& is_X) {
 }
 
 /**
- * @brief Mutates a chromossome with the current mutation rate for each symbol.
- * @param chromossome The chromossome to be updated.
+ * @brief Mutates a chromosome with the current mutation rate for each symbol.
+ * @param chromosome The chromosome to be updated.
  * @param is_X Whether to use X's stagnation rate or O's.
- * @return The mutated chromossome.
+ * @return The mutated chromosome.
  */
-vector<unsigned long long> POPULATION::mutate(const vector<unsigned long long>& chromossome, const bool& is_X)
-{
+vector<unsigned long long> POPULATION::mutate(const vector<unsigned long long>& chromosome, const bool& is_X) {
     vector<unsigned long long> mutated;
-    mutated.reserve(chromossome.size()); // Pre-allocate memory to speed up push_back
+    mutated.reserve(9); // Pre-allocate memory to speed up push_back
     unsigned long long mutation_rate = is_X ? mutation_rateX : mutation_rateO;
 
-    for (auto &gene : chromossome)
-    {
-        if (Random64::probability() <= mutation_rate)
-        {
-            double noise = Random64::deviation(0.0, MUTATION_STEP);
-            long long noiseInt = std::llround(noise);
-            /* If noise is negative AND its magnitude is greater than the gene,
-            the result would be negative. We clamp it to 1. */
-            if (noiseInt < 0 && gene < (unsigned long long)(-noiseInt)) {
-                mutated.push_back(1);
-            } 
-            else {
-                unsigned long long m = gene + noiseInt;
-                // Final clamp to ensure we never drop below 1
-                mutated.push_back(m < 1 ? 1 : m);
-            }
+    for (auto &gene : chromosome) {
+        if(gene == 0) { // Invalid move
+            mutated.push_back(0);
+            continue; 
         }
-        else
-            mutated.push_back(gene);
+
+        if (Random64::probability() <= mutation_rate) {
+            double noise = Random64::deviation(0.0, MUTATION_STEP);
+            long long noiseInt = llround(noise);
+            double new_gene = (double)gene + noiseInt;
+            // Clamp to 1 if lower than 1
+            mutated.push_back(new_gene < 1 ? 1 : (unsigned long long)new_gene);
+        }
+        else mutated.push_back(gene); // Does not apply mutation
     }
     return mutated;
 }
 
 /**
  * @brief Creates a new population by crossing over the best
- * individual's chromossomes with every other bot in the population.
+ * individual's chromosomes with every other bot in the population.
  */
 void POPULATION::crossover(const bool& save_load) {
     // Sorts the population according to their win rate
@@ -117,41 +111,41 @@ void POPULATION::crossover(const bool& save_load) {
 
     for(int i = 0; i < NUM_INDIV/2 - 1; i++) {
         // X's population   
-        // The child has all the BEST bot's chromossomes
+        // The child has all the BEST bot's chromosomes
         BOT child = BESTX.bot;
-        for(auto& [board_state, chromossome] : popX[i].bot.genome) {
-            if(child.genome.count(board_state)) { // Both parents have this chromossome
-                // Average of both parent's chromossomes
+        for(auto& [board_state, chromosome] : popX[i].bot.genome) {
+            if(child.genome.count(board_state)) { // Both parents have this chromosome
+                // Average of both parent's chromosomes
                 for(int j = 0; j < 9; j++) {
-                    child.genome[board_state][j] += chromossome[j];
+                    child.genome[board_state][j] += chromosome[j];
                     child.genome[board_state][j] /= 2;
                 }
-            } else // Only the current individual has this chromossome
-                child.genome[board_state] = chromossome;
+            } else // Only the current individual has this chromosome
+                child.genome[board_state] = chromosome;
             // Applies mutation to each gene
             update_mutation_rate(true);
-            for(auto& [board_state, chromossome] : child.genome) {
-                chromossome = mutate(chromossome, true);
+            for(auto& [board_state, chromosome] : child.genome) {
+                chromosome = mutate(chromosome, true);
             }
         }
         new_popX.push_back({child, 0, 0, 0});
 
         // O's population
-        // The child has all the BEST bot's chromossomes
+        // The child has all the BEST bot's chromosomes
         child = BESTO.bot;
-        for(auto& [board_state, chromossome] : popO[i].bot.genome) {
-            if(child.genome.count(board_state)) { // Both parents have this chromossome
-                // Average of both parent's chromossomes
+        for(auto& [board_state, chromosome] : popO[i].bot.genome) {
+            if(child.genome.count(board_state)) { // Both parents have this chromosome
+                // Average of both parent's chromosomes
                 for(int j = 0; j < 9; j++) {
-                    child.genome[board_state][j] += chromossome[j];
+                    child.genome[board_state][j] += chromosome[j];
                     child.genome[board_state][j] /= 2;
                 }
-            } else // Only the current individual has this chromossome
-                child.genome[board_state] = chromossome;
+            } else // Only the current individual has this chromosome
+                child.genome[board_state] = chromosome;
             // Applies mutation to each gene
             update_mutation_rate(false);
-            for(auto& [board_state, chromossome] : child.genome) {
-                chromossome = mutate(chromossome, false);
+            for(auto& [board_state, chromosome] : child.genome) {
+                chromosome = mutate(chromosome, false);
             }
         }
         new_popO.push_back({child, 0, 0, 0});
@@ -402,8 +396,6 @@ void POPULATION::train_botvsplayer(bool print, bool save_load, bool is_X) {
         if(result == WIN) BESTO.wins++;
         else if(result == LOSS) BESTO.losses++;
         else BESTO.draws++;
-
-        if(save_load) BESTO.bot.save_genome("results/BESTO.txt");
     } else {
         if(save_load) BESTX.bot.load_genome("results/BESTX.txt");
 
@@ -412,7 +404,5 @@ void POPULATION::train_botvsplayer(bool print, bool save_load, bool is_X) {
         if(result == WIN) BESTX.wins++;
         else if(result == LOSS) BESTX.losses++;
         else BESTX.draws++;
-
-        if(save_load) BESTX.bot.save_genome("results/BESTX.txt");
     }
 }

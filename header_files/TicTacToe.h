@@ -25,7 +25,7 @@
 
     class BOTvsBOT : public TicTacToe {
         private:
-        BOT bot2;
+        BOT& bot2;
         array<BOT*, 2> players;
 
         public:

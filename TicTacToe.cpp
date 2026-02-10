@@ -36,7 +36,7 @@ int BOTvsMINIMAX::run_game(bool print) {
             // Prints the bot's chance of picking each move
             if(print) {
                 cout << "Bot's possible moves: ";
-                bot.print_chromossome(board, move);
+                bot.print_chromosome(board, move);
             }
             board.make_move(bot.symbol, move.first, move.second);
         } else {
@@ -117,7 +117,7 @@ int BOTvsBOT::run_game(bool print) {
         // Prints the bot's chance of picking each move
         if(print) {
             cout << "Possible moves: ";
-            players[curr_player]->print_chromossome(board, move);
+            players[curr_player]->print_chromosome(board, move);
         }
         if(print) {
             cout << "Player " << players[curr_player]->symbol << ", make a move (row and column): ";
@@ -185,7 +185,7 @@ int BOTvsPLAYER::run_game(bool print) {
             // Prints the bot's chance of picking each move
             if(print) {
                 cout << "Bot's possible moves: ";
-                bot.print_chromossome(board, move);
+                bot.print_chromosome(board, move);
                 cout << "Chosen move: " << move.first + 1 << " " << move.second + 1 << endl;
             }
             board.make_move(bot.symbol, move.first, move.second);

@@ -46,7 +46,7 @@ vector<char> BOT::flip_grid(const vector<char>& grid) {
 
 /**
  * @brief Rotates a move pair 90 degrees clockwise
- * @param raw_grid The original move pair (before rotating)
+ * @param raw_move The original move pair (before rotating)
  * @return the new rotated move pair
  */
 pair<short, short> BOT::rotate_move(const pair<short, short>& raw_move) {
@@ -144,7 +144,7 @@ pair<vector<char>, pair<short, short>> BOT::unget_canonical(
 }
 
 /***
- * @brief Returns if a move is valid given a canon state of the board
+ * @brief Returns if a move is valid given a canon state of the board as a vector<char>.
  * @param canon the canon board state
  * @param x row
  * @param y column
@@ -164,29 +164,37 @@ bool BOT::canon_valid_move(vector<char> canon, short x, short y) {
 }
 
 /***
- * @brief Un-rotates and un-flips a canon chromossome.
- * @param canon_chrom the rotated/flipped chromossome
+ * @brief Un-rotates and un-flips a canon chromosome.
+ * @param canon_chrom the rotated/flipped chromosome
  * @param rotation the number of 90º rotations
- * @param flip if the chromossome was flipped or not
- * @return The raw chromossome.
+ * @param flip if the chromosome was flipped or not
+ * @return The raw chromosome.
  */
-vector<unsigned long long> BOT::raw_chromossome(const vector<unsigned long long>& canon_chrom, 
+vector<unsigned long long> BOT::raw_chromosome(const vector<unsigned long long>& canon_chrom, 
     const int& rotation, const bool& flip
 ) {
-    vector<unsigned long long> raw = canon_chrom;
-    // rotates
+    vector<unsigned long long> current = canon_chrom;
+    // Un-rotates
     int rotations = (4 - rotation) % 4;
-    for(int i = 0; i < rotations; i++){
-        for(int j =0; j<3; j++){
-            raw[i * 3 + j] = raw[(2-j) * 3 + i];
+    for(int k = 0; k < rotations; k++) {
+        vector<unsigned long long> next_grid(9);
+        for(int r = 0; r < 3; r++) {
+            for(int c = 0; c < 3; c++) {
+                // Map source (r,c) to dest (c, 2-r) [90º Clockwise]
+                next_grid[c * 3 + (2 - r)] = current[r * 3 + c];
+            }
+        }
+        current = next_grid; // Update for the next pass
+    }
+    // Un-flips
+    if(flip) {
+        for(int r = 0; r < 3; ++r) {
+            // Swap col 0 and col 2
+            swap(current[r*3 + 0], current[r*3 + 2]);
         }
     }
-    // Flips
-    for(int r = 0; r < 3; ++r) {
-        // Swap col 0 and col 2
-        swap(raw[r*3 + 0], raw[r*3 + 2]);
-    }
-    return raw;
+    
+    return current;
 }
 
 /**
@@ -211,11 +219,11 @@ void BOT::register_move(const vector<char>& grid, const short& x, const short& y
 }
 
 /***
- * @brief Generates chromossomes for a new board state
+ * @brief Generates chromosomes for a new board state
  * @param board the canon (flipped and rotated) board
- * @return The sum of all the new chromossomes' scores
+ * @return The sum of all the new chromosomes' scores
  */
-int BOT::new_chromossome(const vector<char>& canon_grid) {
+int BOT::new_chromosome(const vector<char>& canon_grid) {
     vector<unsigned long long> new_chrom(9, 0);
     int sum = 0; // Already sums the genes for the roulette wheel selection
     for(short x = 0; x < 3; x++) 
@@ -241,7 +249,7 @@ void BOT::update_genome(const short& result) {
     if(result == WIN) {
         reward = 0.2f;
     } else if(result == LOSS) {
-        reward = -0.05f;
+        reward = -0.35f;
     } else if(result == DRAW) {
         reward = 0.1f; // Give a smaller reward for drawing to prefer it over losing
     }
@@ -253,9 +261,9 @@ void BOT::update_genome(const short& result) {
         pair<short, short>& canon_move = canon.second;
         short move_index = canon_move.first * 3 + canon_move.second;
 
-        // New state of the board, creates new chromossome
+        // New state of the board, creates new chromosome
         if(genome.count(canon_board) == 0)
-            new_chromossome(canon_board);
+            new_chromosome(canon_board);
         
         // Invalid move, just skips
         if(genome[canon_board][move_index] == 0) {
@@ -266,7 +274,7 @@ void BOT::update_genome(const short& result) {
         // Apply reward/penalty
 
         // Calculates total sum as a base to the reward/penalty
-        unsigned long long total = 0;
+        unsigned long long total = 0.0;
         for(auto& gene : genome[canon_board])
             total += gene;
 
@@ -274,22 +282,24 @@ void BOT::update_genome(const short& result) {
         double current_val = (double)genome[canon_board][move_index];
         double delta = (double)total * reward;
         double new_val = current_val + delta;
-        // Checks for overflow and preserves the probabilities (scales the entire chromossome)
-        if(new_val >= (double) UINT64_MAX) {
+        // Checks for overflow and preserves the probabilities (scales the entire chromosome)
+        // The max limit is divided by 9 so the total sum doesn't also overflow.
+        if(new_val >= (double) UINT64_MAX/9.0) {
             unsigned long long new_total = 0;
             for(auto& gene : genome[canon_board]) {
                 if(gene == 0) // Skips invalid moves
                     continue;
                 double ratio = (double)gene / (double) total;
-                ratio *= 1000.0;
+                ratio *= 1e8;
                 // A valid move should remain available
-                gene = ratio == 0 ? 1 : (unsigned long long)ratio;
+                gene = (unsigned long long)ratio == 0 ? 1 : (unsigned long long)ratio;
                 new_total += gene;
             }
             delta = (double)new_total * reward;
             current_val = (double)genome[canon_board][move_index];
             new_val = current_val + delta;
-        } // Checks for underflow and keeps the move available
+        } 
+        // Checks for underflow and keeps the move available
         if(new_val < 1.0) genome[canon_board][move_index] = 1;
         else genome[canon_board][move_index] = (unsigned long long)new_val;
 
@@ -312,15 +322,15 @@ pair<short, short> BOT::choose_move(const BOARD& board) {
         }
     }
 
-    // Stores the sum of the chromossomes's scores
+    // Stores the sum of the chromosomes's scores
     unsigned long long sum_of_scores = 0;
     int rotation;
     bool flip;
     auto canon = get_canonical(board.grid, {0,0}, &rotation, &flip);
     auto& canon_board = canon.first;
 
-    if(genome.count(canon_board) == 0) { // Creates a new chromossome
-        sum_of_scores = new_chromossome(canon_board);
+    if(genome.count(canon_board) == 0) { // Creates a new chromosome
+        sum_of_scores = new_chromosome(canon_board);
     } else {
         for(short x = 0; x < 3; ++x) {
             for(short y = 0; y < 3; ++y) {
@@ -351,7 +361,7 @@ pair<short, short> BOT::choose_move(const BOARD& board) {
  * @param board The game's current board.
  * @param move The last move leading up to this board state.
  */
-void BOT::print_chromossome(const BOARD &board, const pair<short, short>& move) {
+void BOT::print_chromosome(const BOARD &board, const pair<short, short>& move) {
     int rotation;
     bool flip;
     auto canon = get_canonical(board.grid, move, &rotation, &flip);
@@ -360,10 +370,10 @@ void BOT::print_chromossome(const BOARD &board, const pair<short, short>& move) 
         return;
     }
 
-    // Un-rotates the chromossome to match the board printed onto the console
-    auto raw = raw_chromossome(genome[canon.first], rotation, flip);
-    for(auto& genome : raw)
-        cout << genome << " ";
+    // Un-rotates the chromosome to match the board printed onto the console
+    auto raw = raw_chromosome(genome[canon.first], rotation, flip);
+    for(auto& gene : raw)
+        cout << gene << " ";
     cout << endl;
 }
 
