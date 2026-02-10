@@ -38,9 +38,9 @@
 
         void update_mutation_rate(const bool& is_X);
         vector<unsigned long long> mutate(const vector<unsigned long long>& chromossome, const bool& is_X);
+        void crossover(const bool& save_load);
         void load_best(void);
         void save_best(void);
-        void crossover(const bool& save_load);
 
         public:
         POPULATION(void);

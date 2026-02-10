@@ -23,7 +23,7 @@ void BOARD::reset_board(void) {
  * @param y y coordinate (int between 0 and 2).
  * @returns TRUE if the move is valid, FALSE otherwise.
  */
-bool BOARD::valid_move(short int x, short int y) {
+bool BOARD::valid_move(short int x, short int y) const {
     // Move is out of bounds
     if(x < 0 || x > 2 || y < 0 || y > 2)
         return false;

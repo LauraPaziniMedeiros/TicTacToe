@@ -50,53 +50,6 @@ vector<unsigned long long> POPULATION::mutate(const vector<unsigned long long>& 
     return mutated;
 }
 
-void POPULATION::load_best(void) {
-    ifstream file("results/BESTwinrateX.bin");
-    if(!file.is_open()) {
-        cout << "Could not open file \"results/BESTwinrateX.bin\" for reading\n";
-        return;
-    }
-    string line;
-    getline(file, line);
-    stringstream ssX(line);
-    char separator;
-    ssX >> BESTX.wins >> separator >> BESTX.draws >> separator >> BESTX.losses;
-    file.close();
-
-    file.open("results/BESTwinrateO.bin");
-    if(!file.is_open()) {
-        cout << "Could not open file \"results/BESTwinrateO.bin\" for reading\n";
-        return;
-    }
-    getline(file, line);
-    stringstream ssO(line);
-    ssO >> BESTO.wins >> separator >> BESTO.draws >> separator >> BESTO.losses;
-
-    BESTX.bot.load_genome("results/BESTX.txt");
-    BESTO.bot.load_genome("results/BESTO.txt");
-}
-
-void POPULATION::save_best(void) {
-    ofstream file("results/BESTwinrateX.bin");
-    if(!file.is_open()) {
-        cout << "Could not open file \"results/BESTwinrateX.bin\" for writing\n";
-        return;
-    }
-    file << BESTX.wins << "," << BESTX.draws << "," << BESTX.losses << endl;
-    file.close();
-
-    file.open("results/BESTwinrateO.bin");
-    if(!file.is_open()) {
-        cout << "Could not open file \"results/BESTwinrateO.bin\" for writing\n";
-        return;
-    }
-    file << BESTO.wins << "," << BESTO.draws << "," << BESTO.losses << endl;
-    file.close();
-
-    BESTX.bot.save_genome("results/BESTX.txt");
-    BESTO.bot.save_genome("results/BESTO.txt");
-}
-
 /**
  * @brief Creates a new population by crossing over the best
  * individual's chromossomes with every other bot in the population.
@@ -205,6 +158,63 @@ void POPULATION::crossover(const bool& save_load) {
     }
     popX.clear(); popX = new_popX;
     popO.clear(); popO = new_popO;
+}
+
+/**
+ * @brief Loads the last recorded BEST individuals and their stagnation rates.
+ */
+void POPULATION::load_best(void) {
+    ifstream file("results/BESTwinrateX.bin");
+    if(!file.is_open()) {
+        cout << "Could not open file \"results/BESTwinrateX.bin\" for reading\n";
+        return;
+    }
+    string line;
+    getline(file, line);
+    stringstream ssX(line);
+    char separator;
+    ssX >> stagnationX >> separator;
+    ssX >> BESTX.wins >> separator >> BESTX.draws >> separator >> BESTX.losses;
+    file.close();
+
+    file.open("results/BESTwinrateO.bin");
+    if(!file.is_open()) {
+        cout << "Could not open file \"results/BESTwinrateO.bin\" for reading\n";
+        return;
+    }
+    getline(file, line);
+    stringstream ssO(line);
+    ssO >> stagnationO >> separator;
+    ssO >> BESTO.wins >> separator >> BESTO.draws >> separator >> BESTO.losses;
+
+    BESTX.bot.load_genome("results/BESTX.txt");
+    BESTO.bot.load_genome("results/BESTO.txt");
+}
+
+/**
+ * @brief Saves the BEST individuals along with their stagnation rates.
+ */
+void POPULATION::save_best(void) {
+    ofstream file("results/BESTwinrateX.bin");
+    if(!file.is_open()) {
+        cout << "Could not open file \"results/BESTwinrateX.bin\" for writing\n";
+        return;
+    }
+    file << stagnationX << ",";
+    file << BESTX.wins << "," << BESTX.draws << "," << BESTX.losses << endl;
+    file.close();
+
+    file.open("results/BESTwinrateO.bin");
+    if(!file.is_open()) {
+        cout << "Could not open file \"results/BESTwinrateO.bin\" for writing\n";
+        return;
+    }
+    file << stagnationO << ",";
+    file << BESTO.wins << "," << BESTO.draws << "," << BESTO.losses << endl;
+    file.close();
+
+    BESTX.bot.save_genome("results/BESTX.txt");
+    BESTO.bot.save_genome("results/BESTO.txt");
 }
 
 /**

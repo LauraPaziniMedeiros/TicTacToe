@@ -236,14 +236,14 @@ int BOT::new_chromossome(const vector<char>& canon_grid) {
  */
 void BOT::update_genome(const short& result) {
     int counter = 0;
-    float reward = 0;
+    float reward = 0.0f;
 
     if(result == WIN) {
-        reward = 0.2;
+        reward = 0.2f;
     } else if(result == LOSS) {
-        reward = -0.05;
+        reward = -0.05f;
     } else if(result == DRAW) {
-        reward = 0.1; // Give a smaller reward for drawing to prefer it over losing
+        reward = 0.1f; // Give a smaller reward for drawing to prefer it over losing
     }
 
     // Apply reward to all moves made in the game
@@ -253,29 +253,45 @@ void BOT::update_genome(const short& result) {
         pair<short, short>& canon_move = canon.second;
         short move_index = canon_move.first * 3 + canon_move.second;
 
-        // New state of the board
+        // New state of the board, creates new chromossome
         if(genome.count(canon_board) == 0)
             new_chromossome(canon_board);
         
-        // Unvalid move
+        // Invalid move, just skips
         if(genome[canon_board][move_index] == 0) {
             counter++;
             continue;
         }
         
-        // Apply the reward/penalty
+        // Apply reward/penalty
+
+        // Calculates total sum as a base to the reward/penalty
         unsigned long long total = 0;
         for(auto& gene : genome[canon_board])
             total += gene;
-            
-        unsigned long long new_gene = genome[canon_board][move_index] + total * reward;
-        if(new_gene <= 0) {
-            // A valid move should remain available for playing
-            if(genome[canon_board][move_index] > 0)
-                genome[canon_board][move_index] = 1;
-            else 
-                genome[canon_board][move_index] = 0;
-        } else genome[canon_board][move_index] = new_gene;
+
+        // This preserves negative values and prevents immediate wrap-around
+        double current_val = (double)genome[canon_board][move_index];
+        double delta = (double)total * reward;
+        double new_val = current_val + delta;
+        // Checks for overflow and preserves the probabilities (scales the entire chromossome)
+        if(new_val >= (double) UINT64_MAX) {
+            unsigned long long new_total = 0;
+            for(auto& gene : genome[canon_board]) {
+                if(gene == 0) // Skips invalid moves
+                    continue;
+                double ratio = (double)gene / (double) total;
+                ratio *= 1000.0;
+                // A valid move should remain available
+                gene = ratio == 0 ? 1 : (unsigned long long)ratio;
+                new_total += gene;
+            }
+            delta = (double)new_total * reward;
+            current_val = (double)genome[canon_board][move_index];
+            new_val = current_val + delta;
+        } // Checks for underflow and keeps the move available
+        if(new_val < 1.0) genome[canon_board][move_index] = 1;
+        else genome[canon_board][move_index] = (unsigned long long)new_val;
 
         counter++;
     }
@@ -287,6 +303,15 @@ void BOT::update_genome(const short& result) {
  * @returns a pair with the coordinates of the bot's next move.
  */
 pair<short, short> BOT::choose_move(const BOARD& board) {
+    if(board.used_cells == 8) { // Only one move available
+        for(int i = 0; i < 3; i++) {
+            for(int j = 0; j < 3; j++) {
+                if(board.valid_move(i, j))
+                    return {i, j};
+            }
+        }
+    }
+
     // Stores the sum of the chromossomes's scores
     unsigned long long sum_of_scores = 0;
     int rotation;

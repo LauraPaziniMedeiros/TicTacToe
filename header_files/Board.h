@@ -19,14 +19,13 @@
      * @brief Manages the 3x3 grid state for a Tic-Tac-Toe game.
      */
     class BOARD {
-    private:
-        short int used_cells;
     public:
+        short int used_cells;
         vector<char> grid;
 
         BOARD();
         void reset_board(void);        
-        bool valid_move(short int x, short int y);
+        bool valid_move(short int x, short int y) const;
         void draw_board(void);
         bool move_available(void);
         bool full(void);
